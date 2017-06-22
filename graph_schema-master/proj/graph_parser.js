@@ -1,5 +1,5 @@
 function load_graph_instance(filename) {
-	xmlhttp = new XMLHttpRequest();
+	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.onreadystatechange = function(){
   		if(xmlhttp.readyState === 4 && xmlhttp.status === 200) {
 
@@ -50,28 +50,76 @@ function load_graph_instance(filename) {
 	return xmlhttp.onreadystatechange();
 }
 
+function load_initial_graph_state(filename, graph_instance) {
+	var xmlhttp = new XMLHttpRequest();
+	xmlhttp.onreadystatechange = function(){
+  		if(xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+
+			var xmlDoc = xmlhttp.responseXML;
+			var initEvents = xmlDoc.getElementsByTagName("InitEvent");
+
+			for (var i = 0; i < initEvents.length; i++) {
+				var n = initEvents[i];
+				var id = n.getAttribute("dev");
+				var prop = JSON.parse("{" + n.childNodes[1].innerHTML + "}"); // gets the p element
+
+				var node = find_node_by_id(graph_instance.nodes, id);
+				Object.assign(node.p, prop);
+			}
+
+		   	return;
+		}
+	}
+	xmlhttp.open("GET", filename, false);
+	xmlhttp.send();
+
+	return xmlhttp.onreadystatechange();
+
+}
+
 function load_graph_events(filename) {
-	var events = [];
 	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.onreadystatechange = function() {
 		if(xmlhttp.readyState === 4 && xmlhttp.status === 200) {
-			var lines = xmlhttp.responseText.split('\n');
+			var events = { "send": [],
+							"recv": [] }
 
-			for (var i = 0; i < lines.length; i++) {
-				if (lines[i].startsWith("Send:")) {
-					var source_id = /\s(.+):out/.exec(lines[i])[1];
-					var curr_spin = parseInt(/curr_spin\s=\s(-?\d)/.exec(lines[i])[1]);
+			var xmlDoc = xmlhttp.responseXML;
+			var sendEvents = xmlDoc.getElementsByTagName("SendEvent");
+			var recvEvents = xmlDoc.getElementsByTagName("RecvEvent");
 
-					i++
-					var send_again = parseInt(/sendAgain\s=\s(\d)/.exec(lines[i])[1]);
+			for (var i = 0; i < sendEvents.length; i++) {
+				var eventXml = sendEvents[i];
+				var evt = {};
 
-					var prop = {
-						"curr_spin" : curr_spin,
-						"send_again": send_again
-					};
-
-					events.push(package_event(source_id, "out", prop)); // from "out" port
+				for (var j = 0; j < eventXml.attributes.length; j++) {
+					  var attr = eventXml.attributes[j];
+					  evt[attr.name] = attr.value; 
 				}
+
+				var s = JSON.parse("{" + eventXml.childNodes[1].innerHTML + "}");
+				var m = JSON.parse("{" + eventXml.childNodes[3].innerHTML + "}");
+
+				evt.node_prop = s;
+				evt.msg_prop = m;
+
+				events.send.push(evt);
+			}
+
+			for (var i = 0; i < recvEvents.length; i++) {
+				var eventXml = recvEvents[i];
+				var evt = {};
+
+				for (var j = 0; j < eventXml.attributes.length; j++) {
+					  var attr = eventXml.attributes[j];
+					  evt[attr.name] = attr.value; 
+				}
+
+				var s = JSON.parse("{" + eventXml.childNodes[1].innerHTML + "}");
+
+				evt.node_prop = s;
+
+				events.recv.push(evt);
 			}
 
 			return events;
@@ -81,71 +129,124 @@ function load_graph_events(filename) {
 	xmlhttp.open("GET", filename, false); // TODO: false is deprecated
 	xmlhttp.send();
 	return xmlhttp.onreadystatechange();
-
-
-	function package_event(source_id, port, properties) {
-		var evt = {
-			"port" : port,
-			"id": source_id,
-			"prop": properties // properties of source node that have changed due to this event
-		}
-
-		return evt;
-
-	}
 }
 
-function display_initial_graph(data) {
+var COLOURS = {
+	"1": "#FF0000",
+	"-1": "#00a1ff"
+}
+
+
+function force_graph(selector, data) {
 	var width = window.innerWidth;
    	var height = window.innerHeight;
+  	var _data = data
+  	svg = d3.select("body")
+      	.append("svg")
+      	.attr("viewBox", "0 0 " + width + " " + height)
+      	.attr("preserveAspectRatio", "xMidYMid meet");
 
-	var svg = d3.select("body")
-				.append("svg")
-				.attr("viewBox", "0 0 " + width + " " + height )
-         		.attr("preserveAspectRatio", "xMidYMid meet");
 
-	var simulation = d3.forceSimulation()
+    this.data = function(value) {
+    	if(!arguments.length) {
+        	return _data;
+      	}
+      	
+      	_data = value;
+      	return this;
+   	}
+
+   	this.draw = function() {
+   		var simulation = d3.forceSimulation()
 				    .force("link", d3.forceLink().id(function(d) { return d.id; }))
 				    .force("charge", d3.forceManyBody())
 				    .force("center", d3.forceCenter(width / 2, height / 2));
 
-	var link = svg.append("g")
-			    	.attr("class", "edges")
-			    	.selectAll("line")
-			    	.data(data.edges)
-			    	.enter().append("line")
-						      	.attr("stroke", "#cccccc");
+		var link = svg.append("g")
+				    	.attr("class", "edges")
+				    	.selectAll("line")
+				    	.data(data.edges)
+				    	.enter().append("line")
+							      	.attr("stroke", "#cccccc");
 
-	var node = svg.append("g")
-			    .attr("class", "nodes")
-			    .selectAll("circle")
-			    .data(data.nodes)
-			    .enter().append("circle")
-			    .attr("r", 5)
+		var node = svg.append("g")
+				    .attr("class", "nodes")
+				    .selectAll("circle")
+				    .data(data.nodes)
+				    .enter().append("circle")
+				    .attr("r", 5)
+				    .attr("fill", function(d) { return COLOURS[d.p.spin]});
 
-	simulation.nodes(data.nodes)
-      			.on("tick", ticked);
 
-  	simulation.force("link")
-      			.links(data.edges);
+		simulation.nodes(data.nodes)
+	      			.on("tick", ticked);
 
-	function ticked() {
-		link
-	        .attr("x1", function(d) { return d.source.x; })
-	        .attr("y1", function(d) { return d.source.y; })
-	        .attr("x2", function(d) { return d.target.x; })
-	        .attr("y2", function(d) { return d.target.y; });
+	  	simulation.force("link")
+	      			.links(data.edges);
 
-	    node
-	        .attr("cx", function(d) { return d.x; })
-	        .attr("cy", function(d) { return d.y; });
-	}
+	    function ticked() {
+			link
+		        .attr("x1", function(d) { return d.source.x; })
+		        .attr("y1", function(d) { return d.source.y; })
+		        .attr("x2", function(d) { return d.target.x; })
+		        .attr("y2", function(d) { return d.target.y; });
+
+		    node
+		        .attr("cx", function(d) { return d.x; })
+		        .attr("cy", function(d) { return d.y; })
+		        .attr("fill", function(d) { console.log(d.p.spin); return COLOURS[d.p.spin]});
+		}
+   	}
+
+   	
+
+}
+
+function update_dataset(data, evt) {
+	var id = evt.dev;
+	var p = evt.node_prop;
+
+	var n = find_node_by_id(data.nodes, id);
+	n.p = p;
+
+	graph.data(data);
+	// graph.draw();
+
 }
 
 
+function find_node_by_id(nodes, id) {
+ 	for (var i = 0; i < nodes.length; i++) {
+   		if (nodes[i].id === id) {
+     			return nodes[i];
+   		}
+  	}
+  	throw "Couldn't find object with id: " + id;
+}
+
+function find_edges_by_source_id(edges, source_id) {
+	var edgeList = []
+	for (var i = 0; i < edges.length; i++) {
+   		if (edges[i].source === source_id) {
+     			edgeList.push(edges[i]);
+   		}
+  	}
+
+  	return edgeList;
+}
+
 var data = load_graph_instance("data/ising_spin_16_2.xml");
-var events = load_graph_events("data/ising_spin_16_2_event.txt");
+load_initial_graph_state("data/ising_spin_16_2_event.xml", data);
+
+var events = load_graph_events("data/ising_spin_16_2_event.xml");
 
 data.events = events;
 
-display_initial_graph(data);
+// display_initial_graph(data);
+var graph = new force_graph("body", data);
+graph.draw();
+
+for (var i = 0; i < data.events.send.length; i++) {
+	setTimeout(update_dataset(data, data.events.send[i]), 100);
+	
+}
