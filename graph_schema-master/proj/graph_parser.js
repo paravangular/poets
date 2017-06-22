@@ -162,19 +162,20 @@ function force_graph(selector, data) {
 				    .force("charge", d3.forceManyBody())
 				    .force("center", d3.forceCenter(width / 2, height / 2));
 
-		var link = svg.append("g")
+		link = svg.append("g")
 				    	.attr("class", "edges")
 				    	.selectAll("line")
 				    	.data(data.edges)
 				    	.enter().append("line")
 							      	.attr("stroke", "#cccccc");
 
-		var node = svg.append("g")
+		node = svg.append("g")
 				    .attr("class", "nodes")
 				    .selectAll("circle")
 				    .data(data.nodes)
 				    .enter().append("circle")
-				    .attr("r", 5)
+				    .attr("class", function(d) { return d.id })
+				    .attr("r", 10)
 				    .attr("fill", function(d) { return COLOURS[d.p.spin]});
 
 
@@ -193,8 +194,7 @@ function force_graph(selector, data) {
 
 		    node
 		        .attr("cx", function(d) { return d.x; })
-		        .attr("cy", function(d) { return d.y; })
-		        .attr("fill", function(d) { console.log(d.p.spin); return COLOURS[d.p.spin]});
+		        .attr("cy", function(d) { return d.y; });
 		}
    	}
 
@@ -206,11 +206,15 @@ function update_dataset(data, evt) {
 	var id = evt.dev;
 	var p = evt.node_prop;
 
+
 	var n = find_node_by_id(data.nodes, id);
+
+	console.log(id + " " + n.p.spin);
 	n.p = p;
 
-	graph.data(data);
-	// graph.draw();
+	// TODO: find better way: use d3 merges?
+	d3.select("circle." + id)
+		.attr("fill", function(d) { return COLOURS[n.p.spin]});
 
 }
 
@@ -242,11 +246,14 @@ var events = load_graph_events("data/ising_spin_16_2_event.xml");
 
 data.events = events;
 
-// display_initial_graph(data);
 var graph = new force_graph("body", data);
 graph.draw();
 
-for (var i = 0; i < data.events.send.length; i++) {
-	setTimeout(update_dataset(data, data.events.send[i]), 100);
-	
+
+function timeout_loop(i) {
+	update_dataset(data, data.events.send[i]);
+    i++;
+    if (i < data.events.send.length) {setTimeout(function(){timeout_loop(i);}, 100);}
 }
+
+timeout_loop(0);
