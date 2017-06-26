@@ -140,8 +140,8 @@ var COLOURS = {
 function force_graph(selector, data) {
 
 	var simulating = false;
-	var width = window.innerWidth * 0.8;
-   	var height = window.innerHeight;
+	var width = window.innerWidth * 0.7;
+   	var height = window.innerHeight * 0.98;
   	var _data = data
   	svg = d3.select("body")
       	.append("svg")
@@ -194,6 +194,8 @@ function force_graph(selector, data) {
 				    .attr("class", function(d) { return d.id })
 				    .attr("r", 10)
 				    .attr("fill", function(d) { return COLOURS[d.p.spin]})
+				    .attr("stroke", "#FFFFFF")
+				    .attr("stroke-width", "1px")
 				    .on("click", function(d) { show_node_details(d) })
 				    .call(d3.drag()
 			        .on("start", dragstarted)

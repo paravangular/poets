@@ -1,0 +1,18 @@
+svg {
+	position: fixed;
+	left: 0;
+	display: inline-block;
+	border: solid 2px #dddddd;
+}
+
+#nav {
+	position: fixed;
+	right: 0;
+	width: 18%;
+	height: 98%;
+	display: inline-block;
+}
+
+button {
+	display: inline-block;
+}
