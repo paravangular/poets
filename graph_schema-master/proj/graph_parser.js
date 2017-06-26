@@ -138,14 +138,31 @@ var COLOURS = {
 
 
 function force_graph(selector, data) {
-	var width = window.innerWidth;
+
+	var simulating = false;
+	var width = window.innerWidth * 0.8;
    	var height = window.innerHeight;
   	var _data = data
   	svg = d3.select("body")
       	.append("svg")
-      	.attr("viewBox", "0 0 " + width + " " + height)
-      	.attr("preserveAspectRatio", "xMidYMid meet");
+		.attr("width", width)
+		.attr("height", height);
+	
+	svg.append("rect")
+	    .attr("width", width)
+	    .attr("height", height)
+	    .style("fill", "none")
+	    .style("pointer-events", "all")
+	    .call(d3.zoom()
+	      .on("zoom", zoomed));
 
+	var g = svg.append("g");
+
+	function zoomed() {
+		if (!simulating) {
+	    	g.attr("transform", d3.event.transform);
+	    }
+	}
 
     this.data = function(value) {
     	if(!arguments.length) {
@@ -162,22 +179,26 @@ function force_graph(selector, data) {
 				    .force("charge", d3.forceManyBody())
 				    .force("center", d3.forceCenter(width / 2, height / 2));
 
-		link = svg.append("g")
+		link = g.append("g")
 				    	.attr("class", "edges")
 				    	.selectAll("line")
 				    	.data(data.edges)
 				    	.enter().append("line")
 							      	.attr("stroke", "#cccccc");
 
-		node = svg.append("g")
+		node = g.append("g")
 				    .attr("class", "nodes")
 				    .selectAll("circle")
 				    .data(data.nodes)
 				    .enter().append("circle")
 				    .attr("class", function(d) { return d.id })
 				    .attr("r", 10)
-				    .attr("fill", function(d) { return COLOURS[d.p.spin]});
-
+				    .attr("fill", function(d) { return COLOURS[d.p.spin]})
+				    .on("click", function(d) { show_node_details(d) })
+				    .call(d3.drag()
+			        .on("start", dragstarted)
+			        .on("drag", dragged)
+			        .on("end", dragended));
 
 		simulation.nodes(data.nodes)
 	      			.on("tick", ticked);
@@ -196,77 +217,126 @@ function force_graph(selector, data) {
 		        .attr("cx", function(d) { return d.x; })
 		        .attr("cy", function(d) { return d.y; });
 		}
+
+		function show_node_details(d) {
+			// TODO: tooltip?
+			console.log(d);
+		}
+
+		function dragstarted(d) {
+			if (!simulating) {
+				if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+			    d.fx = d.x;
+			    d.fy = d.y;
+			}
+		    
+		  }
+
+		  function dragged(d) {
+			if (!simulating) {
+			    d.fx = d3.event.x;
+			    d.fy = d3.event.y;
+			}
+		  }
+
+		  function dragended(d) {
+			if (!simulating) {
+				 if (!d3.event.active) simulation.alphaTarget(0);
+			    d.fx = null;
+			    d.fy = null;
+			}
+		   
+		  }
    	}
 
-   	
-
-}
-
-function update_dataset(data, send_evt) {
-	var id = send_evt.dev;
-	var p = send_evt.node_prop;
+	this.update_dataset = function(data, send_evt) {
+		var id = send_evt.dev;
+		var p = send_evt.node_prop;
 
 
-	var n = find_node_by_id(data.nodes, id);
-	n.p = p;
+		var n = find_node_by_id(data.nodes, id);
+		n.p = p;
 
-	// TODO: find better way: use d3 merges?
-	var source_circle = d3.select("circle." + id)
-	source_circle.attr("fill", function(d) { return COLOURS[n.p.spin]});
+		// TODO: find better way: use d3 merges?
+		var source_circle = d3.select("circle." + id)
+		source_circle.attr("fill", function(d) { return COLOURS[n.p.spin]});
 
-    var start = circle_point(source_circle);
-    var ends = [];
+	    var start = circle_point(source_circle);
+	    var ends = [];
 
-	var recv_evts = find_recv_event(data.events, send_evt);
-	for (var i = 0; i < recv_evts.length; i++) {
-		var target_circle = d3.select("circle." + recv_evts[i].dev)
-		ends.push(circle_point(target_circle));
+		var recv_evts = find_recv_event(data.events, send_evt);
+		for (var i = 0; i < recv_evts.length; i++) {
+			var target_circle = d3.select("circle." + recv_evts[i].dev)
+			ends.push(circle_point(target_circle));
 
-	}
-
-	message_animation(start, ends);
-
-    function circle_point(circle) {
-	    var x = circle._groups[0][0].cx.animVal.value,
-	    	y = circle._groups[0][0].cy.animVal.value;
-
-	    return x + ", " + y;
-	}
-
-	function message_animation(s, es) {
-		var svg = d3.select("svg")
-		var markers = [];
-
-		for (var i = 0; i < es.length; i++) {
-			markers.push(svg.append("circle"));
-			markers[i].attr("r", 7)
-				.attr("fill", "green")
-			   	.attr("transform", "translate(" + s + ")");
-
-			markers[i].transition()
-        		.duration(250)
-	        	.attr("transform", "translate(" + es[i] + ")")
-	        	.remove();
 		}
-		
-	}
 
-}
+		message_animation(start, ends);
 
-function find_recv_event(events, send) {
-	var send_id = send.eventId;
+	    function circle_point(circle) {
+		    var x = circle._groups[0][0].cx.animVal.value,
+		    	y = circle._groups[0][0].cy.animVal.value;
 
-	var recv_evts = [];
-
-	for (var i = 0; i < events.recv.length; i++) {
-
-		if (events.recv[i].sendEventId === send_id) {
-			recv_evts.push(events.recv[i]);
+		    return x + ", " + y;
 		}
+
+		function message_animation(s, es) {
+			var markers = [];
+
+			for (var i = 0; i < es.length; i++) {
+				markers.push(g.append("circle"));
+				markers[i].attr("r", 7)
+					.attr("class", "marker")
+					.attr("fill", "green")
+				   	.attr("transform", "translate(" + s + ")");
+
+				markers[i].transition()
+	        		.duration(250)
+		        	.attr("transform", "translate(" + es[i] + ")")
+		        	.remove();
+			}
+			
+		}
+
+		function find_recv_event(events, send) {
+			var send_id = send.eventId;
+
+			var recv_evts = [];
+
+			for (var i = 0; i < events.recv.length; i++) {
+
+				if (events.recv[i].sendEventId === send_id) {
+					recv_evts.push(events.recv[i]);
+				}
+			}
+
+			return recv_evts;
+		}
+
 	}
 
-	console.log(recv_evts);
-	return recv_evts;
+	this.start_poets_simulation = function() {
+		simulating = true;
+
+		setTimeout(function() {timeout_loop(0)}, 500);
+
+		function timeout_loop(i) {
+			if (simulating) {
+				graph.update_dataset(data, data.events.send[i]);
+			    i++;
+			    if (i < data.events.send.length) {setTimeout(function(){timeout_loop(i);}, 500);}
+			}
+			
+		}
+
+	}
+
+	this.stop_poets_simulation = function() {
+		simulating = false;
+		d3.selectAll("circle.marker").remove();
+	}
+	   	
+
 }
 
 
@@ -299,12 +369,22 @@ data.events = events;
 
 var graph = new force_graph("body", data);
 graph.draw();
+setTimeout(function() { graph.start_poets_simulation()}, 2500);
 
 
-function timeout_loop(i) {
-	update_dataset(data, data.events.send[i]);
-    i++;
-    if (i < data.events.send.length) {setTimeout(function(){timeout_loop(i);}, 500);}
-}
+$(document).ready(function() {
+	$("#start").prop('disabled', true);
+    
+    $("#stop").click(function(){
+        graph.stop_poets_simulation();
 
-setTimeout(function() {timeout_loop(0)}, 2000);
+        $("#stop").prop('disabled', true);
+        $("#start").prop('disabled', false);
+    }); 
+
+    $("#start").click(function(){
+        graph.start_poets_simulation();
+        $("#start").prop('disabled', true);
+        $("#stop").prop('disabled', false);
+    }); 
+});
