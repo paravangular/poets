@@ -158,7 +158,7 @@ function force_graph(selector, data) {
 
    	this.draw = function() {
    		var simulation = d3.forceSimulation()
-				    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+				    .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50).strength(1))
 				    .force("charge", d3.forceManyBody())
 				    .force("center", d3.forceCenter(width / 2, height / 2));
 
@@ -202,20 +202,71 @@ function force_graph(selector, data) {
 
 }
 
-function update_dataset(data, evt) {
-	var id = evt.dev;
-	var p = evt.node_prop;
+function update_dataset(data, send_evt) {
+	var id = send_evt.dev;
+	var p = send_evt.node_prop;
 
 
 	var n = find_node_by_id(data.nodes, id);
-
-	console.log(id + " " + n.p.spin);
 	n.p = p;
 
 	// TODO: find better way: use d3 merges?
-	d3.select("circle." + id)
-		.attr("fill", function(d) { return COLOURS[n.p.spin]});
+	var source_circle = d3.select("circle." + id)
+	source_circle.attr("fill", function(d) { return COLOURS[n.p.spin]});
 
+    var start = circle_point(source_circle);
+    var ends = [];
+
+	var recv_evts = find_recv_event(data.events, send_evt);
+	for (var i = 0; i < recv_evts.length; i++) {
+		var target_circle = d3.select("circle." + recv_evts[i].dev)
+		ends.push(circle_point(target_circle));
+
+	}
+
+	message_animation(start, ends);
+
+    function circle_point(circle) {
+	    var x = circle._groups[0][0].cx.animVal.value,
+	    	y = circle._groups[0][0].cy.animVal.value;
+
+	    return x + ", " + y;
+	}
+
+	function message_animation(s, es) {
+		var svg = d3.select("svg")
+		var markers = [];
+
+		for (var i = 0; i < es.length; i++) {
+			markers.push(svg.append("circle"));
+			markers[i].attr("r", 7)
+				.attr("fill", "green")
+			   	.attr("transform", "translate(" + s + ")");
+
+			markers[i].transition()
+        		.duration(250)
+	        	.attr("transform", "translate(" + es[i] + ")")
+	        	.remove();
+		}
+		
+	}
+
+}
+
+function find_recv_event(events, send) {
+	var send_id = send.eventId;
+
+	var recv_evts = [];
+
+	for (var i = 0; i < events.recv.length; i++) {
+
+		if (events.recv[i].sendEventId === send_id) {
+			recv_evts.push(events.recv[i]);
+		}
+	}
+
+	console.log(recv_evts);
+	return recv_evts;
 }
 
 
@@ -253,7 +304,7 @@ graph.draw();
 function timeout_loop(i) {
 	update_dataset(data, data.events.send[i]);
     i++;
-    if (i < data.events.send.length) {setTimeout(function(){timeout_loop(i);}, 100);}
+    if (i < data.events.send.length) {setTimeout(function(){timeout_loop(i);}, 500);}
 }
 
-timeout_loop(0);
+setTimeout(function() {timeout_loop(0)}, 2000);
