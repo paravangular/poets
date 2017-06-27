@@ -142,7 +142,9 @@ function force_graph(selector, data) {
 	var simulating = false;
 	var width = window.innerWidth * 0.7;
    	var height = window.innerHeight * 0.98;
-  	var _data = data
+  	var _data = data;
+  	var prop_domain = [0, 0];
+
   	svg = d3.select("body")
       	.append("svg")
 		.attr("width", width)
@@ -173,6 +175,28 @@ function force_graph(selector, data) {
       	return this;
    	}
 
+   	this.clear = function() {
+   		d3.selectAll("g > *").remove();
+   	}
+
+   	this.change_colour = function(prop) {
+   		var min = Number.POSITIVE_INFINITY,
+   			max = Number.NEGATIVE_INFINITY;
+
+   		for (var i = 0; i < _data.nodes.length; i++) {
+   			var p = _data.nodes[i].p[prop];
+
+   			if (typeof(p) != "undefined") {
+	   			min = Math.min(min, p);
+	   			max = Math.max(max, p);
+   			}
+   		}
+
+   		prop_domain[0] = min;
+   		prop_domain[1] = max;
+   	}
+
+
    	this.draw = function() {
    		var simulation = d3.forceSimulation()
 				    .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50).strength(1))
@@ -193,7 +217,10 @@ function force_graph(selector, data) {
 				    .enter().append("circle")
 				    .attr("class", function(d) { return d.id })
 				    .attr("r", 10)
-				    .attr("fill", function(d) { return COLOURS[d.p.spin]})
+				    .attr("fill", function(d) { 
+				    	var selected = $("input[name='property']:checked").val();
+				    	return get_node_colour(selected, d.p[selected])
+				    })
 				    .attr("stroke", "#FFFFFF")
 				    .attr("stroke-width", "1px")
 				    .on("click", function(d) { show_node_details(d) })
@@ -251,7 +278,16 @@ function force_graph(selector, data) {
 		  }
    	}
 
-	this.update_dataset = function(data, send_evt) {
+   	function get_node_colour(prop, value) {
+   		var colour = d3.scaleLinear()
+  						.domain(prop_domain)
+  						.interpolate(d3.interpolateHcl)
+      					.range([d3.rgb("#007AFF"), d3.rgb('#FF0000')]);
+
+      	return colour(value);
+   	}
+
+	function update_dataset(data, send_evt) {
 		var id = send_evt.dev;
 		var p = send_evt.node_prop;
 
@@ -261,7 +297,11 @@ function force_graph(selector, data) {
 
 		// TODO: find better way: use d3 merges?
 		var source_circle = d3.select("circle." + id)
-		source_circle.attr("fill", function(d) { return COLOURS[n.p.spin]});
+		var selected = $("input[name='property']:checked").val();
+
+		source_circle.attr("fill", function(d) { 
+			return get_node_colour(selected, n.p[selected]) 
+		});
 
 	    var start = circle_point(source_circle);
 	    var ends = [];
@@ -317,27 +357,37 @@ function force_graph(selector, data) {
 
 	}
 
+	this.stop_poets_simulation = function() {
+		simulating = false;
+		d3.selectAll("circle.marker").remove();
+
+        $("#stop").prop('disabled', true);
+        $("#start").prop('disabled', false);
+	}
+	   	
 	this.start_poets_simulation = function() {
+
+        $("#start").prop('disabled', true);
+        $("#stop").prop('disabled', false);
 		simulating = true;
+
 
 		setTimeout(function() {timeout_loop(0)}, 500);
 
 		function timeout_loop(i) {
 			if (simulating) {
-				graph.update_dataset(data, data.events.send[i]);
+				update_dataset(data, data.events.send[i]);
 			    i++;
-			    if (i < data.events.send.length) {setTimeout(function(){timeout_loop(i);}, 500);}
+			    if (i < data.events.send.length) {
+			    	setTimeout(function(){timeout_loop(i);}, 500);
+			    } else {
+			    	stop_poets_simulation();
+			    }
 			}
 			
 		}
 
 	}
-
-	this.stop_poets_simulation = function() {
-		simulating = false;
-		d3.selectAll("circle.marker").remove();
-	}
-	   	
 
 }
 
@@ -362,31 +412,75 @@ function find_edges_by_source_id(edges, source_id) {
   	return edgeList;
 }
 
-var data = load_graph_instance("data/ising_spin_16_2.xml");
-load_initial_graph_state("data/ising_spin_16_2_event.xml", data);
 
-var events = load_graph_events("data/ising_spin_16_2_event.xml");
+function load_node_props(filename) {
+	var xmlhttp = new XMLHttpRequest();
+	
+	xmlhttp.onreadystatechange = function(){
+  		if(xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+  			var props = [];
+			var xmlDoc = xmlhttp.responseXML;
+			var devTypes = xmlDoc.getElementsByTagName("DeviceType");
 
-data.events = events;
+			for (var i = 0; i < devTypes.length; i++) {
+				var prop = devTypes[i].getElementsByTagName("State")[0].childNodes;
+				
+				for (var j = 1; j < prop.length; j += 2) {
+					var name = prop[j].getAttribute("name");
+					props.push(name);
+				}
+				
+			}
 
-var graph = new force_graph("body", data);
-graph.draw();
-setTimeout(function() { graph.start_poets_simulation()}, 2500);
+			return props;
+			
+		}
+	}
+	xmlhttp.open("GET", filename, false);
+	xmlhttp.send();
 
+	return xmlhttp.onreadystatechange();
+}
+
+function load_property_menu(props) {
+	for (var p = 0; p < props.length; p++) {
+		var radio = $('<input type="radio" name="property" value= "' + props[p] + '">' + props[p] + '<br>');
+    	radio.appendTo('#property-menu');
+	}
+
+}
 
 $(document).ready(function() {
+	var props = load_node_props("data/ising_spin_16_2.xml");
+	load_property_menu(props);
+	
+	var data = load_graph_instance("data/ising_spin_16_2.xml");
+	load_initial_graph_state("data/ising_spin_16_2_event.xml", data);
+
+	var events = load_graph_events("data/ising_spin_16_2_event.xml");
+
+	data.events = events;
+
+	var graph = new force_graph("body", data);
+	graph.draw();
+	setTimeout(function() { graph.start_poets_simulation()}, 2500);
+
+	$('input[type="radio"]').click(function(){
+	    if ($(this).is(':checked')) {
+	    	graph.change_colour(this.value);
+	    	graph.clear();
+	    	graph.draw();
+	    }
+	});
+
 	$("#start").prop('disabled', true);
     
     $("#stop").click(function(){
         graph.stop_poets_simulation();
 
-        $("#stop").prop('disabled', true);
-        $("#start").prop('disabled', false);
     }); 
 
     $("#start").click(function(){
         graph.start_poets_simulation();
-        $("#start").prop('disabled', true);
-        $("#stop").prop('disabled', false);
-    }); 
+    });
 });

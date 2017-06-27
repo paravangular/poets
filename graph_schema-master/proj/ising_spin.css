@@ -5,10 +5,10 @@ svg {
 	border: solid 2px #dddddd;
 }
 
-#nav {
+#sidebar {
 	position: fixed;
 	right: 0;
-	width: 18%;
+	width: 28%;
 	height: 98%;
 	display: inline-block;
 }
