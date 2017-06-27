@@ -50,6 +50,35 @@ function load_graph_instance(filename) {
 	return xmlhttp.onreadystatechange();
 }
 
+function load_node_props(filename) {
+	var xmlhttp = new XMLHttpRequest();
+	
+	xmlhttp.onreadystatechange = function(){
+  		if(xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+  			var props = [];
+			var xmlDoc = xmlhttp.responseXML;
+			var devTypes = xmlDoc.getElementsByTagName("DeviceType");
+
+			for (var i = 0; i < devTypes.length; i++) {
+				var prop = devTypes[i].getElementsByTagName("State")[0].childNodes;
+				
+				for (var j = 1; j < prop.length; j += 2) {
+					var name = prop[j].getAttribute("name");
+					props.push(name);
+				}
+				
+			}
+
+			return props;
+			
+		}
+	}
+	xmlhttp.open("GET", filename, false);
+	xmlhttp.send();
+
+	return xmlhttp.onreadystatechange();
+}
+
 function load_initial_graph_state(filename, graph_instance) {
 	var xmlhttp = new XMLHttpRequest();
 	xmlhttp.onreadystatechange = function(){
@@ -137,7 +166,7 @@ var COLOURS = {
 }
 
 
-function force_graph(selector, data) {
+function ForceGraph(selector, data) {
 
 	var simulating = false;
 	var width = window.innerWidth * 0.7;
@@ -175,28 +204,6 @@ function force_graph(selector, data) {
       	return this;
    	}
 
-   	this.clear = function() {
-   		d3.selectAll("g > *").remove();
-   	}
-
-   	this.change_colour = function(prop) {
-   		var min = Number.POSITIVE_INFINITY,
-   			max = Number.NEGATIVE_INFINITY;
-
-   		for (var i = 0; i < _data.nodes.length; i++) {
-   			var p = _data.nodes[i].p[prop];
-
-   			if (typeof(p) != "undefined") {
-	   			min = Math.min(min, p);
-	   			max = Math.max(max, p);
-   			}
-   		}
-
-   		prop_domain[0] = min;
-   		prop_domain[1] = max;
-   	}
-
-
    	this.draw = function() {
    		var simulation = d3.forceSimulation()
 				    .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50).strength(1))
@@ -212,7 +219,7 @@ function force_graph(selector, data) {
 
 		node = g.append("g")
 				    .attr("class", "nodes")
-				    .selectAll("circle")
+				    .selectAll("circle") // TODO: device shape
 				    .data(data.nodes)
 				    .enter().append("circle")
 				    .attr("class", function(d) { return d.id })
@@ -222,7 +229,7 @@ function force_graph(selector, data) {
 				    	return get_node_colour(selected, d.p[selected])
 				    })
 				    .attr("stroke", "#FFFFFF")
-				    .attr("stroke-width", "1px")
+				    .attr("stroke-width", "2px")
 				    .on("click", function(d) { show_node_details(d) })
 				    .call(d3.drag()
 			        .on("start", dragstarted)
@@ -285,7 +292,65 @@ function force_graph(selector, data) {
 		  }
    	}
 
-   	function get_node_colour(prop, value) {
+	this.clear = function() {
+   		d3.selectAll("g > *").remove();
+   	}
+
+   	this.change_colour = function(prop) {
+   		var min = Number.POSITIVE_INFINITY,
+   			max = Number.NEGATIVE_INFINITY;
+
+   		for (var i = 0; i < _data.nodes.length; i++) {
+   			var p = _data.nodes[i].p[prop];
+
+   			if (typeof(p) != "undefined") {
+	   			min = Math.min(min, p);
+	   			max = Math.max(max, p);
+   			}
+   		}
+
+   		prop_domain[0] = min;
+   		prop_domain[1] = max;
+   	}
+
+	this.stop_poets_simulation = function() {
+		simulating = false;
+		d3.selectAll("circle.marker").remove();
+
+        $("#stop").prop('disabled', true);
+        $("#start").prop('disabled', false);
+	}
+	   	
+	this.start_poets_simulation = function() {
+
+        $("#start").prop('disabled', true);
+        $("#stop").prop('disabled', false);
+		simulating = true;
+
+
+		setTimeout(function() {timeout_loop(0)}, 50);
+
+		function timeout_loop(i) {
+			if (simulating) {
+				update_dataset(data, data.events.send[i]);
+			    i++;
+			    if (i < data.events.send.length) {
+			    	setTimeout(function(){timeout_loop(i);}, 5);
+			    } else {
+			    	// stop_poets_simulation is not defined?
+			    	simulating = false;
+					d3.selectAll("circle.marker").remove();
+
+			        $("#stop").prop('disabled', true);
+			        $("#start").prop('disabled', false);
+			    }
+			}
+			
+		}
+
+	}
+
+	   	function get_node_colour(prop, value) {
    		var colour = d3.scaleLinear()
   						.domain(prop_domain)
   						.interpolate(d3.interpolateHcl)
@@ -364,38 +429,6 @@ function force_graph(selector, data) {
 
 	}
 
-	this.stop_poets_simulation = function() {
-		simulating = false;
-		d3.selectAll("circle.marker").remove();
-
-        $("#stop").prop('disabled', true);
-        $("#start").prop('disabled', false);
-	}
-	   	
-	this.start_poets_simulation = function() {
-
-        $("#start").prop('disabled', true);
-        $("#stop").prop('disabled', false);
-		simulating = true;
-
-
-		setTimeout(function() {timeout_loop(0)}, 500);
-
-		function timeout_loop(i) {
-			if (simulating) {
-				update_dataset(data, data.events.send[i]);
-			    i++;
-			    if (i < data.events.send.length) {
-			    	setTimeout(function(){timeout_loop(i);}, 500);
-			    } else {
-			    	stop_poets_simulation();
-			    }
-			}
-			
-		}
-
-	}
-
 }
 
 
@@ -420,35 +453,6 @@ function find_edges_by_source_id(edges, source_id) {
 }
 
 
-function load_node_props(filename) {
-	var xmlhttp = new XMLHttpRequest();
-	
-	xmlhttp.onreadystatechange = function(){
-  		if(xmlhttp.readyState === 4 && xmlhttp.status === 200) {
-  			var props = [];
-			var xmlDoc = xmlhttp.responseXML;
-			var devTypes = xmlDoc.getElementsByTagName("DeviceType");
-
-			for (var i = 0; i < devTypes.length; i++) {
-				var prop = devTypes[i].getElementsByTagName("State")[0].childNodes;
-				
-				for (var j = 1; j < prop.length; j += 2) {
-					var name = prop[j].getAttribute("name");
-					props.push(name);
-				}
-				
-			}
-
-			return props;
-			
-		}
-	}
-	xmlhttp.open("GET", filename, false);
-	xmlhttp.send();
-
-	return xmlhttp.onreadystatechange();
-}
-
 function load_property_menu(props) {
 	for (var p = 0; p < props.length; p++) {
 		var radio = $('<input type="radio" name="property" value= "' + props[p] + '">' + props[p] + '<br>');
@@ -458,6 +462,8 @@ function load_property_menu(props) {
 }
 
 $(document).ready(function() {
+
+	// LOADING DATA
 	var props = load_node_props("data/ising_spin_16_2.xml");
 	load_property_menu(props);
 	
@@ -468,12 +474,18 @@ $(document).ready(function() {
 
 	data.events = events;
 
-	var graph = new force_graph("body", data);
+	// CREATE GRAPH
+	var graph = new ForceGraph("body", data);
 	graph.draw();
-	setTimeout(function() { graph.start_poets_simulation()}, 2500);
 
+	// RUN SIMULATION
+	setTimeout(function() { graph.start_poets_simulation()}, 200);
+
+
+	// UI BUTTONS AND OPTIONS
 	$('input[type="radio"]').click(function(){
 	    if ($(this).is(':checked')) {
+	    	graph.stop_poets_simulation();
 	    	graph.change_colour(this.value);
 	    	graph.clear();
 	    	graph.draw();
