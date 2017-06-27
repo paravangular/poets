@@ -248,8 +248,15 @@ function force_graph(selector, data) {
 		}
 
 		function show_node_details(d) {
-			// TODO: tooltip?
-			console.log(d);
+			var prop_string = 'ID: ' + d.id + '<br>' + 'Type: ' + d.type + '<br>';
+
+			for (var prop in d.p) {
+				prop_string += prop + ': ' + d.p[prop] + '<br>';
+			}
+
+
+			$("#node-detail-menu").empty();
+			$("#node-detail-menu").append(prop_string);
 		}
 
 		function dragstarted(d) {
