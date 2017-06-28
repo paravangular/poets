@@ -16,3 +16,7 @@ svg {
 button {
 	display: inline-block;
 }
+
+.selected-node {
+	stroke: #000000;
+}

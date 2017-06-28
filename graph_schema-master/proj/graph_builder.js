@@ -160,19 +160,17 @@ function load_graph_events(filename) {
 	return xmlhttp.onreadystatechange();
 }
 
-var COLOURS = {
-	"1": "#FF0000",
-	"-1": "#00a1ff"
-}
-
-
 function ForceGraph(selector, data) {
 
+	// logic vars
 	var simulating = false;
+  	var prop_domain = [0, 0];
+  	var message_passing_time = 100;
+
+  	// d3 vars
 	var width = window.innerWidth * 0.7;
    	var height = window.innerHeight * 0.98;
   	var _data = data;
-  	var prop_domain = [0, 0];
 
   	svg = d3.select("body")
       	.append("svg")
@@ -185,15 +183,15 @@ function ForceGraph(selector, data) {
 	    .style("fill", "none")
 	    .style("pointer-events", "all")
 	    .call(d3.zoom()
-	      .on("zoom", zoomed));
+	    	.on("zoom", function() {
+				if (!simulating) {
+			    	g.attr("transform", d3.event.transform);
+			    }
+			}));
 
 	var g = svg.append("g");
 
-	function zoomed() {
-		if (!simulating) {
-	    	g.attr("transform", d3.event.transform);
-	    }
-	}
+	
 
     this.data = function(value) {
     	if(!arguments.length) {
@@ -230,7 +228,22 @@ function ForceGraph(selector, data) {
 				    })
 				    .attr("stroke", "#FFFFFF")
 				    .attr("stroke-width", "2px")
-				    .on("click", function(d) { show_node_details(d) })
+				    .on("click", function(d) { 
+
+				    	if (d3.select(this).classed("selected-node")) {
+				    		d3.select(this)
+								.classed("selected-node", false);
+
+				    	} else {
+				    		d3.select(".selected-node")
+								.classed("selected-node", false);
+
+							d3.select(this)
+								.classed("selected-node", true);
+				    	}
+
+
+						show_node_details(this, d) })
 				    .call(d3.drag()
 			        .on("start", dragstarted)
 			        .on("drag", dragged)
@@ -254,7 +267,7 @@ function ForceGraph(selector, data) {
 		        .attr("cy", function(d) { return d.y; });
 		}
 
-		function show_node_details(d) {
+		function show_node_details(node, d) {
 			var prop_string = 'ID: ' + d.id + '<br>' + 'Type: ' + d.type + '<br>';
 
 			for (var prop in d.p) {
@@ -335,7 +348,7 @@ function ForceGraph(selector, data) {
 				update_dataset(data, data.events.send[i]);
 			    i++;
 			    if (i < data.events.send.length) {
-			    	setTimeout(function(){timeout_loop(i);}, 5);
+			    	setTimeout(function(){timeout_loop(i);}, 1);
 			    } else {
 			    	// stop_poets_simulation is not defined?
 			    	simulating = false;
@@ -399,13 +412,13 @@ function ForceGraph(selector, data) {
 
 			for (var i = 0; i < es.length; i++) {
 				markers.push(g.append("circle"));
-				markers[i].attr("r", 7)
+				markers[i].attr("r", 4)
 					.attr("class", "marker")
 					.attr("fill", "green")
 				   	.attr("transform", "translate(" + s + ")");
 
 				markers[i].transition()
-	        		.duration(250)
+	        		.duration(message_passing_time)
 		        	.attr("transform", "translate(" + es[i] + ")")
 		        	.remove();
 			}
@@ -461,45 +474,3 @@ function load_property_menu(props) {
 
 }
 
-$(document).ready(function() {
-
-	// LOADING DATA
-	var props = load_node_props("data/ising_spin_16_2.xml");
-	load_property_menu(props);
-	
-	var data = load_graph_instance("data/ising_spin_16_2.xml");
-	load_initial_graph_state("data/ising_spin_16_2_event.xml", data);
-
-	var events = load_graph_events("data/ising_spin_16_2_event.xml");
-
-	data.events = events;
-
-	// CREATE GRAPH
-	var graph = new ForceGraph("body", data);
-	graph.draw();
-
-	// RUN SIMULATION
-	setTimeout(function() { graph.start_poets_simulation()}, 200);
-
-
-	// UI BUTTONS AND OPTIONS
-	$('input[type="radio"]').click(function(){
-	    if ($(this).is(':checked')) {
-	    	graph.stop_poets_simulation();
-	    	graph.change_colour(this.value);
-	    	graph.clear();
-	    	graph.draw();
-	    }
-	});
-
-	$("#start").prop('disabled', true);
-    
-    $("#stop").click(function(){
-        graph.stop_poets_simulation();
-
-    }); 
-
-    $("#start").click(function(){
-        graph.start_poets_simulation();
-    });
-});
