@@ -17,6 +17,10 @@ button {
 	display: inline-block;
 }
 
+g.nodes > * {
+	cursor: pointer;
+}
+
 .selected-node {
 	stroke: #000000;
 }

@@ -4,6 +4,10 @@ function load_graph_instance(filename) {
   		if(xmlhttp.readyState === 4 && xmlhttp.status === 200) {
 
 			var xmlDoc = xmlhttp.responseXML;
+
+			var graphProperties = xmlDoc.getElementsByTagName("GraphInstance")[0].getElementsByTagName("Properties");
+			var p = JSON.parse("{" + graphProperties[0].innerHTML + "}");
+
 			var nodesList = xmlDoc.getElementsByTagName("DevI");
 			var nodes = [];
 
@@ -39,7 +43,8 @@ function load_graph_instance(filename) {
 
 		   	var data = {
 		   		"nodes": nodes,
-		   		"edges": edges
+		   		"edges": edges,
+		   		"p": p
 		   	}
 		   	return data;
 		}
@@ -162,15 +167,17 @@ function load_graph_events(filename) {
 
 function ForceGraph(selector, data) {
 
-	// logic vars
-	var simulating = false;
-  	var prop_domain = [0, 0];
-  	var message_passing_time = 100;
-
   	// d3 vars
 	var width = window.innerWidth * 0.7;
    	var height = window.innerHeight * 0.98;
   	var _data = data;
+
+
+	// logic vars
+	var simulating = false;
+  	var prop_domain = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+  	var message_passing_time = 100;
+  	var last_event_time = get_last_event_time();
 
   	svg = d3.select("body")
       	.append("svg")
@@ -310,20 +317,8 @@ function ForceGraph(selector, data) {
    	}
 
    	this.change_colour = function(prop) {
-   		var min = Number.POSITIVE_INFINITY,
-   			max = Number.NEGATIVE_INFINITY;
-
-   		for (var i = 0; i < _data.nodes.length; i++) {
-   			var p = _data.nodes[i].p[prop];
-
-   			if (typeof(p) != "undefined") {
-	   			min = Math.min(min, p);
-	   			max = Math.max(max, p);
-   			}
-   		}
-
-   		prop_domain[0] = min;
-   		prop_domain[1] = max;
+   		set_prop_domain(prop);
+   		console.log(prop_domain);
    	}
 
 	this.stop_poets_simulation = function() {
@@ -363,13 +358,41 @@ function ForceGraph(selector, data) {
 
 	}
 
-	   	function get_node_colour(prop, value) {
-   		var colour = d3.scaleLinear()
+	function get_last_event_time() {
+		var sends = data.events.send;
+		var recvs = data.events.recv;
+
+		return Math.max(sends[sends.length - 1], recvs[recvs.length - 1]);
+	}
+
+	function get_node_colour(prop, value) {
+		var colour = d3.scaleLinear()
   						.domain(prop_domain)
   						.interpolate(d3.interpolateHcl)
       					.range([d3.rgb("#007AFF"), d3.rgb('#FF0000')]);
 
       	return colour(value);
+   	}
+
+
+   	function set_prop_domain(prop) {
+   		// TODO: to avoid recalculation, store this as property?
+   		var min = Number.POSITIVE_INFINITY,
+   			max = Number.NEGATIVE_INFINITY;
+
+   		var all_events = data.events.send.concat(data.events.recv);
+  		
+  		for (var i = 0; i < all_events.length; i++) {
+			var p = all_events[i].node_prop[prop];
+
+			if (typeof(p) != "undefined") {
+				min = Math.min(min, p);
+				max = Math.max(max, p);
+	   		}
+	   	}
+   		
+   		prop_domain[0] = min;
+   		prop_domain[1] = max;
    	}
 
 	function update_dataset(data, send_evt) {
@@ -385,7 +408,7 @@ function ForceGraph(selector, data) {
 		var selected = $("input[name='property']:checked").val();
 
 		source_circle.attr("fill", function(d) { 
-			return get_node_colour(selected, n.p[selected]) 
+			return get_node_colour(selected, n.p[selected]);
 		});
 
 	    var start = circle_point(source_circle);
@@ -465,6 +488,14 @@ function find_edges_by_source_id(edges, source_id) {
   	return edgeList;
 }
 
+function get_last_child(xmln) {
+	console.log(xmln);
+    var x = xmln.lastChild;
+    while (x.nodeType != 1) {
+        x = x.previousSibling;
+    }
+    return x;
+}
 
 function load_property_menu(props) {
 	for (var p = 0; p < props.length; p++) {

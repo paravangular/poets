@@ -7,14 +7,16 @@ $(document).ready(function() {
 
 	$('input[type="radio"]').click(function(){
 	    if ($(this).is(':checked')) {
-	    	graph.stop_poets_simulation();
+	    	if (graph.simulating) {
+	    		graph.stop_poets_simulation();
+	    	}
 	    	graph.change_colour(this.value);
 	    	graph.clear();
 	    	graph.draw();
 	    }
 	});
 
-	$("#start").prop('disabled', true);
+	$("#stop").prop('disabled', true);
     
     $("#start").click(function(){
         graph.start_poets_simulation();
