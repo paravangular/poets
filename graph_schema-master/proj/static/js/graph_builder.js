@@ -136,6 +136,7 @@ function load_graph_events(filename) {
 
 				evt.node_prop = s;
 				evt.msg_prop = m;
+				evt.type = "send";
 
 				events.send.push(evt);
 			}
@@ -152,7 +153,7 @@ function load_graph_events(filename) {
 				var s = JSON.parse("{" + eventXml.childNodes[1].innerHTML + "}");
 
 				evt.node_prop = s;
-
+				evt.type = "recv";
 				events.recv.push(evt);
 			}
 
@@ -198,7 +199,8 @@ function ForceGraph(selector, data) {
 
 	var g = svg.append("g");
 
-	
+	var tooltip = d3.select("body").append("div").attr("class", "tooltip");
+
 
     this.data = function(value) {
     	if(!arguments.length) {
@@ -222,6 +224,7 @@ function ForceGraph(selector, data) {
 				    	.enter().append("line")
 							      	.attr("stroke", "#cccccc");
 
+
 		node = g.append("g")
 				    .attr("class", "nodes")
 				    .selectAll("circle") // TODO: device shape
@@ -236,6 +239,17 @@ function ForceGraph(selector, data) {
 				    .attr("stroke", "#FFFFFF")
 				    .attr("stroke-width", "2px")
 				    .on("click", function(d) { 
+				    	tooltip
+			              .style("display", "inline-block")
+			              .html(show_node_state(d));
+
+			            var tooltip_node = d3.select('.tooltip')._groups[0][0];
+
+			            var tooltip_width =  tooltip_node.getBoundingClientRect().width;
+			            var tooltip_height = tooltip_node.getBoundingClientRect().height;
+
+			            tooltip.style("left", d3.event.pageX - tooltip_width / 2 + "px")
+			              	.style("top", d3.event.pageY - (tooltip_height + 20) + "px")
 
 				    	if (d3.select(this).classed("selected-node")) {
 				    		d3.select(this)
@@ -248,11 +262,19 @@ function ForceGraph(selector, data) {
 							d3.select(this)
 								.classed("selected-node", true);
 				    	}
-
-
-						show_node_state(this, d) })
+					})
 				    .on("dblclick", function(d) {
 				    	show_device_details(d);
+				    })
+				    .on("mouseout", function(d) {
+				    	tooltip
+				    		.style("display", "none");
+
+				    	if (d3.select(this).classed("selected-node")) {
+				    		d3.select(this)
+								.classed("selected-node", false);
+
+				    	}
 				    })
 				    .call(d3.drag()
 			        .on("start", dragstarted)
@@ -278,12 +300,6 @@ function ForceGraph(selector, data) {
 		}
 
 		function show_device_details(d) {
-			// create new FDR with d and connected events
-
-			// find all events involving this device
-			// sort according to firing time
-			// neighbor timeline?
-			
 			$.get({
 			       url: '/device_details', 
 			       success: function(response) {
@@ -295,16 +311,14 @@ function ForceGraph(selector, data) {
 
 		}
 
-		function show_node_state(node, d) {
+		function show_node_state(d) {
 			var prop_string = 'ID: ' + d.id + '<br>' + 'Type: ' + d.type + '<br>';
 
 			for (var prop in d.p) {
 				prop_string += prop + ': ' + d.p[prop] + '<br>';
 			}
 
-
-			$("#node-detail-menu").empty();
-			$("#node-detail-menu").append(prop_string);
+			return prop_string;
 		}
 
 		function dragstarted(d) {
