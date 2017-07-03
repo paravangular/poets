@@ -250,7 +250,10 @@ function ForceGraph(selector, data) {
 				    	}
 
 
-						show_node_details(this, d) })
+						show_node_state(this, d) })
+				    .on("dblclick", function(d) {
+				    	show_device_details(d);
+				    })
 				    .call(d3.drag()
 			        .on("start", dragstarted)
 			        .on("drag", dragged)
@@ -274,7 +277,25 @@ function ForceGraph(selector, data) {
 		        .attr("cy", function(d) { return d.y; });
 		}
 
-		function show_node_details(node, d) {
+		function show_device_details(d) {
+			// create new FDR with d and connected events
+
+			// find all events involving this device
+			// sort according to firing time
+			// neighbor timeline?
+			
+			$.get({
+			       url: '/device_details', 
+			       success: function(response) {
+				        sessionStorage.setItem('active_device', d.id);
+				        window.location.href = '/device_details';
+
+			       }
+			});
+
+		}
+
+		function show_node_state(node, d) {
 			var prop_string = 'ID: ' + d.id + '<br>' + 'Type: ' + d.type + '<br>';
 
 			for (var prop in d.p) {

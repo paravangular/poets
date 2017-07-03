@@ -8,14 +8,17 @@ handlers:
 - url: /
   script: app.application
 
+- url: /device_details
+  script: app.application
+
 - url: /data
   static_dir: data
 
 - url: /lib
   static_dir: lib
 
-- url: /js
-  static_dir: js
+- url: /static/js
+  static_dir: static/js
 
 - url: /static/css
   static_dir: static/css

@@ -1,7 +1,7 @@
 $(document).ready(function() {
 	var props = load_node_props("data/ising_spin_16_2.xml");
 	load_property_menu(props);
-	var graph, data, events;
+	var data, events;
 
 	reset_graph()
 
@@ -28,16 +28,18 @@ $(document).ready(function() {
     }); 
 
     $("#reset").click(function(){
-        reset_graph();
+        window.top.location = window.top.location;
     });
 
 
     function reset_graph() {
+    	$(':radio').prop('checked', false);
+
         if (typeof(graph) != "undefined") {
         	graph.stop_poets_simulation();
-			d3.selectAll("svg").remove();
 	  	}
 
+	  	d3.selectAll("svg").remove();
 	  	// slowing down?
 		data = load_graph_instance("data/ising_spin_16_2.xml");
 		load_initial_graph_state("data/ising_spin_16_2_event.xml", data);
@@ -46,6 +48,7 @@ $(document).ready(function() {
 
 		data.events = events;
 
+		sessionStorage.setItem("data", JSON.stringify(data));
 		graph = new ForceGraph("body", data);
 		graph.draw();
     }
