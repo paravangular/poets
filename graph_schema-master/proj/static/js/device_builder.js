@@ -36,7 +36,7 @@ function DeviceTimeline(selector, data, active_device) {
 			}));
 
 	var g = svg.append("g");
-
+	
     this.data = function(value) {
     	if(!arguments.length) {
         	return _data;

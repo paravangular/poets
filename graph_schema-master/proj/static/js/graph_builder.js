@@ -178,6 +178,7 @@ function ForceGraph(selector, data) {
 	var simulating = false;
   	var prop_domain = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
   	var message_passing_time = 100;
+  	var symbol_size = 300;
   	var last_event_time = get_last_event_time();
 
   	svg = d3.select("body")
@@ -227,11 +228,11 @@ function ForceGraph(selector, data) {
 
 		node = g.append("g")
 				    .attr("class", "nodes")
-				    .selectAll("circle") // TODO: device shape
+				    .selectAll(".device") // TODO: device shape
 				    .data(data.nodes)
-				    .enter().append("circle")
-				    .attr("class", function(d) { return d.id })
-				    .attr("r", 10)
+				    .enter().append("path")
+				    .attr("class", function(d) { return "device " + d.id })
+				    .attr("d", d3.symbol().size(symbol_size).type(d3.symbolCircle))
 				    .attr("fill", function(d) { 
 				    	var selected = $("input[name='property']:checked").val();
 				    	return get_node_colour(selected, d.p[selected])
@@ -294,9 +295,7 @@ function ForceGraph(selector, data) {
 		        .attr("x2", function(d) { return d.target.x; })
 		        .attr("y2", function(d) { return d.target.y; });
 
-		    node
-		        .attr("cx", function(d) { return d.x; })
-		        .attr("cy", function(d) { return d.y; });
+		    node.attr("transform", function (d) {return "translate(" + d.x + ", " + d.y + ")";});
 		}
 
 		function show_device_details(d) {
@@ -378,7 +377,7 @@ function ForceGraph(selector, data) {
 				update_dataset(data, data.events.send[i]);
 			    i++;
 			    if (i < data.events.send.length) {
-			    	setTimeout(function(){timeout_loop(i);}, 1);
+			    	setTimeout(function(){timeout_loop(i);}, 50);
 			    } else {
 			    	// stop_poets_simulation is not defined?
 			    	simulating = false;
@@ -431,6 +430,7 @@ function ForceGraph(selector, data) {
    	}
 
 	function update_dataset(data, send_evt) {
+		// TODO: disallow animation when force-directed graph is still moving
 		var id = send_evt.dev;
 		var p = send_evt.node_prop;
 
@@ -439,31 +439,42 @@ function ForceGraph(selector, data) {
 		n.p = p;
 
 		// TODO: find better way: use d3 merges?
-		var source_circle = d3.select("circle." + id)
+		var source_dev = d3.select("." + id);
+
 		var selected = $("input[name='property']:checked").val();
 
-		source_circle.attr("fill", function(d) { 
+		source_dev.attr("fill", function(d) { 
 			return get_node_colour(selected, n.p[selected]);
 		});
 
-	    var start = circle_point(source_circle);
+	    var start = get_symbol_centroid(source_dev);
 	    var ends = [];
 
 		var recv_evts = find_recv_event(data.events, send_evt);
 		for (var i = 0; i < recv_evts.length; i++) {
-			var target_circle = d3.select("circle." + recv_evts[i].dev)
-			ends.push(circle_point(target_circle));
+			var target_dev = d3.select("." + recv_evts[i].dev)
+			ends.push(get_symbol_centroid(target_dev));
 
 		}
 
 		message_animation(start, ends);
 
-	    function circle_point(circle) {
-		    var x = circle._groups[0][0].cx.animVal.value,
-		    	y = circle._groups[0][0].cy.animVal.value;
+	    function get_symbol_centroid(circle) {
+	    	var bibox = circle._groups[0][0].getBBox();
 
+		    var t = get_translation(d3.select(circle.node()).attr("transform")),
+		    	x = t[0] + (bibox.x + bibox.width)/2 - bibox.width / 4,
+		    	y = t[1] + (bibox.y + bibox.height)/2 - bibox.height / 4;
 		    return x + ", " + y;
 		}
+
+		function get_translation(transform) {
+			  var g = document.createElementNS("http://www.w3.org/2000/svg", "g")
+			  g.setAttributeNS(null, "transform", transform);
+			  var matrix = g.transform.baseVal.consolidate().matrix;
+			  
+			  return [matrix.e, matrix.f];
+			}
 
 		function message_animation(s, es) {
 			var markers = [];
