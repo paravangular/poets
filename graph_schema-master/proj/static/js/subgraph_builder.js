@@ -4,6 +4,10 @@ function SubGraph(selector, data) {
    	var height = window.innerHeight * 0.98;
   	var _data = data;
   	var active_node = init_active_node();
+  	var subgraph;
+  	var adj = {};
+
+  	var max_depth = 4;
 
   	svg = d3.select("body")
       	.append("svg")
@@ -49,10 +53,29 @@ function SubGraph(selector, data) {
    		redraw();
    	}
 
+   	function create_adjacency_list() {
+   		for (var i = 0; i < data.edges.length; i++) {
+   			var node = adj[data.edges[i].source];
+
+   			if (typeof(node) == 'undefined') {
+   				adj[data.edges[i].source] = {}
+   			}
+
+   			adj[data.edges[i].source][data.edges[i].target] = true;
+   		}// TODO: http://staff.vbi.vt.edu/maleq/papers/conversion.pdf 
+
+   	}
+
    	function redraw() {
+   		var depth = max_depth;
+
+   		while (depth > 0) {
+   			depth--;
+
+   			
+   		}
    		// bfs from new node
    		// TODO find better algo
-
    		// d3 update pattern
    	}
 }
