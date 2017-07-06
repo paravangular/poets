@@ -9,7 +9,7 @@ function load_graph_instance(filename) {
 			var p = JSON.parse("{" + graphProperties[0].innerHTML + "}");
 
 			var nodesList = xmlDoc.getElementsByTagName("DevI");
-			var nodes = [];
+			var nodes = {};
 
 			for (var i = 0; i < nodesList.length; i++) {
 				var n = nodesList[i];
@@ -21,7 +21,7 @@ function load_graph_instance(filename) {
 				       		"type": type,
 				       		"p": prop }
 
-				nodes.push(node);
+				nodes[id] = node;
 			}
 
 			var edgesList = xmlDoc.getElementsByTagName("EdgeI");
@@ -225,11 +225,12 @@ function ForceGraph(selector, data) {
 				    	.enter().append("line")
 							      	.attr("stroke", "#cccccc");
 
+		console.log(d3.values(data.nodes))
 
 		node = g.append("g")
 				    .attr("class", "nodes")
 				    .selectAll(".device") // TODO: device shape
-				    .data(data.nodes)
+				    .data(d3.values(data.nodes))
 				    .enter().append("path")
 				    .attr("class", function(d) { return "device " + d.id })
 				    .attr("d", d3.symbol().size(symbol_size).type(d3.symbolCircle))
@@ -282,7 +283,8 @@ function ForceGraph(selector, data) {
 			        .on("drag", dragged)
 			        .on("end", dragended));
 
-		simulation.nodes(data.nodes)
+		console.log(d3.values(data.nodes))
+		simulation.nodes(d3.values(data.nodes))
 	      			.on("tick", ticked);
 
 	  	simulation.force("link")
@@ -515,12 +517,7 @@ function ForceGraph(selector, data) {
 
 
 function find_node_by_id(nodes, id) {
- 	for (var i = 0; i < nodes.length; i++) {
-   		if (nodes[i].id === id) {
-     			return nodes[i];
-   		}
-  	}
-  	throw "Couldn't find object with id: " + id;
+  return nodes[id];
 }
 
 function find_edges_by_source_id(edges, source_id) {
