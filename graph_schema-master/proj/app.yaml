@@ -11,6 +11,9 @@ handlers:
 - url: /device_details
   script: app.application
 
+- url: /subgraph
+  script: app.application
+
 - url: /data
   static_dir: data
 

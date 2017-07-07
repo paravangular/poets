@@ -3,3 +3,12 @@ user acceptance tests
 	- user stories
 
 heatmaps for number of messages received
+
+
+
+two week aim
+	- integrate bigquery
+	- device view
+		- ports
+		- animated real-time messages
+	- dynamic zoom with centralised node

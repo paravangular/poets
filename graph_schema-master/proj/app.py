@@ -8,10 +8,16 @@ config['webapp2_extras.sessions'] = {
 }
 
  
-class ShowHome(webapp2.RequestHandler):
+class ShowGraph(webapp2.RequestHandler):
     def get(self):
         temp_data = {}
         temp_path = 'templates/index.html'
+        self.response.out.write(template.render(temp_path,temp_data))
+
+class ShowSubgraph(webapp2.RequestHandler):
+    def get(self):
+        temp_data = {}
+        temp_path = 'templates/subgraph.html'
         self.response.out.write(template.render(temp_path,temp_data))
 
 class ShowDeviceDetails(webapp2.RequestHandler):
@@ -21,6 +27,7 @@ class ShowDeviceDetails(webapp2.RequestHandler):
 		self.response.write(template.render(temp_path, temp_data))
 
 application = webapp2.WSGIApplication([
-    ('/', ShowHome),
+    ('/', ShowGraph),
+    ('/subgraph', ShowSubgraph),
     ('/device_details', ShowDeviceDetails)
 ], debug=True, config=config)

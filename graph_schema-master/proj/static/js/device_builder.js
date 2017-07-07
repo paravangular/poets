@@ -52,6 +52,7 @@ function DeviceTree(selector, data, active_device) {
    			tree_data.children.push(data.nodes[neighbours[i]]);
    		}
 
+   		console.log(tree_data);
    		var root = d3.hierarchy(tree_data, function(d) { return d.children; });
    		
    		var nodes = tree(root);
