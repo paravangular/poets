@@ -1,7 +1,36 @@
 $(document).ready(function() {
+	var props = load_node_props("data/ising_spin_16_2.xml");
+	load_property_menu(props);
 	var data, events;
 
 	reset_graph()
+
+
+	$('input[type="radio"]').click(function(){
+	    if ($(this).is(':checked')) {
+	    	if (graph.simulating) {
+	    		graph.stop_poets_simulation();
+	    	}
+	    	graph.change_colour(this.value);
+	    	graph.clear();
+	    	graph.draw();
+	    }
+	});
+
+	$("#stop").prop('disabled', true);
+    
+    $("#start").click(function(){
+        graph.start_poets_simulation();
+    });
+
+    $("#stop").click(function(){
+        graph.stop_poets_simulation();
+
+    }); 
+
+    $("#reset").click(function(){
+        window.top.location = window.top.location;
+    });
 
 
     function reset_graph() {

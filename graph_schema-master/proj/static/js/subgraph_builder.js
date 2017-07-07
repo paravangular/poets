@@ -6,8 +6,14 @@ function SubGraph(selector, data) {
   	var active_node = init_active_node();
   	var subgraph = {"nodes": [], "edges": []};
   	var adj = {};
-    var simulating = false;
-
+    
+    
+  // logic vars
+  var simulating = false;
+    var prop_domain = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+    var message_passing_time = 100;
+    var symbol_size = 300;
+    var last_event_time = get_last_event_time();
   	var max_depth = 5;
 
   	svg = d3.select("body")
@@ -40,7 +46,7 @@ function SubGraph(selector, data) {
    	}
 
    	this.draw = function() {
-        console.log(subgraph)
+      console.log(subgraph)
         var simulation = d3.forceSimulation()
                     .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50).strength(1))
                     .force("charge", d3.forceManyBody())
@@ -60,40 +66,40 @@ function SubGraph(selector, data) {
                     .enter().append("path")
                     .attr("class", function(d) { return "device " + d.id })
                     .attr("d", d3.symbol().size(300).type(d3.symbolCircle))
-                    // .attr("fill", function(d) { 
-                    //     var selected = $("input[name='property']:checked").val();
-                    //     return get_node_colour(selected, d.p[selected])
-                    // })
+                    .attr("fill", function(d) { 
+                        var selected = $("input[name='property']:checked").val();
+                        return get_node_colour(selected, d.p[selected])
+                    })
                     .attr("stroke", "#FFFFFF")
                     .attr("stroke-width", "2px")
-                    // .on("click", function(d) { 
-                    //     tooltip
-                    //       .style("display", "inline-block")
-                    //       .html(show_node_state(d));
+                    .on("click", function(d) { 
+                        tooltip
+                          .style("display", "inline-block")
+                          .html(show_node_state(d));
 
-                    //     var tooltip_node = d3.select('.tooltip')._groups[0][0];
+                        var tooltip_node = d3.select('.tooltip')._groups[0][0];
 
-                    //     var tooltip_width =  tooltip_node.getBoundingClientRect().width;
-                    //     var tooltip_height = tooltip_node.getBoundingClientRect().height;
+                        var tooltip_width =  tooltip_node.getBoundingClientRect().width;
+                        var tooltip_height = tooltip_node.getBoundingClientRect().height;
 
-                    //     tooltip.style("left", d3.event.pageX - tooltip_width / 2 + "px")
-                    //         .style("top", d3.event.pageY - (tooltip_height + 20) + "px")
+                        tooltip.style("left", d3.event.pageX - tooltip_width / 2 + "px")
+                            .style("top", d3.event.pageY - (tooltip_height + 20) + "px")
 
-                    //     if (d3.select(this).classed("selected-node")) {
-                    //         d3.select(this)
-                    //             .classed("selected-node", false);
+                        if (d3.select(this).classed("selected-node")) {
+                            d3.select(this)
+                                .classed("selected-node", false);
 
-                    //     } else {
-                    //         d3.select(".selected-node")
-                    //             .classed("selected-node", false);
+                        } else {
+                            d3.select(".selected-node")
+                                .classed("selected-node", false);
 
-                    //         d3.select(this)
-                    //             .classed("selected-node", true);
-                    //     }
-                    // })
-                    // .on("dblclick", function(d) {
-                    //     show_device_details(d);
-                    // })
+                            d3.select(this)
+                                .classed("selected-node", true);
+                        }
+                    })
+                    .on("dblclick", function(d) {
+                        show_device_details(d);
+                    })
                     .on("mouseout", function(d) {
                         tooltip
                             .style("display", "none");
@@ -203,11 +209,11 @@ function SubGraph(selector, data) {
         }
 
         nodes.forEach(function(node) {
-            subgraph.nodes.push({"id" : node});
+            subgraph.nodes.push(data.nodes[node]);
         })
 
         for (var i = 0; i < subgraph.nodes.length; i++) {
-            subgraph.edges.concat(find_edges_by_source_id(subgraph.nodes[i]));
+            subgraph.edges = subgraph.edges.concat(find_edges_within_subgraph(data.edges, subgraph.nodes[i].id, nodes));
         }
 
     }
@@ -238,18 +244,177 @@ function SubGraph(selector, data) {
    		}// TODO: http://staff.vbi.vt.edu/maleq/papers/conversion.pdf 
    	}
 
-   	function redraw() {
+this.clear = function() {
+      d3.selectAll("g > *").remove();
+    }
+
+    this.change_colour = function(prop) {
+      set_prop_domain(prop);
+      console.log(prop_domain);
+    }
+
+  this.stop_poets_simulation = function() {
+    simulating = false;
+    d3.selectAll("circle.marker").remove();
+
+        $("#stop").prop('disabled', true);
+        $("#start").prop('disabled', false);
+  }
+      
+  this.start_poets_simulation = function() {
+
+        $("#start").prop('disabled', true);
+        $("#stop").prop('disabled', false);
+    simulating = true;
 
 
+    setTimeout(function() {timeout_loop(0)}, 50);
 
-   	}
+    function timeout_loop(i) {
+      if (simulating) {
+        update_dataset(data, data.events.send[i]);
+          i++;
+          if (i < data.events.send.length) {
+            setTimeout(function(){timeout_loop(i);}, 50);
+          } else {
+            // stop_poets_simulation is not defined?
+            simulating = false;
+          d3.selectAll("circle.marker").remove();
+
+              $("#stop").prop('disabled', true);
+              $("#start").prop('disabled', false);
+          }
+      }
+      
+    }
+
+  }
+
+  function get_last_event_time() {
+    var sends = data.events.send;
+    var recvs = data.events.recv;
+
+    return Math.max(sends[sends.length - 1], recvs[recvs.length - 1]);
+  }
+
+  function get_node_colour(prop, value) {
+    var colour = d3.scaleLinear()
+              .domain(prop_domain)
+              .interpolate(d3.interpolateHcl)
+                .range([d3.rgb("#007AFF"), d3.rgb('#FF0000')]);
+
+        return colour(value);
+    }
+
+
+    function set_prop_domain(prop) {
+      // TODO: to avoid recalculation, store this as property?
+      var min = Number.POSITIVE_INFINITY,
+        max = Number.NEGATIVE_INFINITY;
+
+      var all_events = data.events.send.concat(data.events.recv);
+      
+      for (var i = 0; i < all_events.length; i++) {
+      var p = all_events[i].node_prop[prop];
+
+      if (typeof(p) != "undefined") {
+        min = Math.min(min, p);
+        max = Math.max(max, p);
+        }
+      }
+      
+      prop_domain[0] = min;
+      prop_domain[1] = max;
+    }
+
+  function update_dataset(data, send_evt) {
+    // TODO: disallow animation when force-directed graph is still moving
+    var id = send_evt.dev;
+    var p = send_evt.node_prop;
+
+
+    var n = data.nodes[id];
+    n.p = p;
+
+    // TODO: find better way: use d3 merges?
+    var source_dev = d3.select("." + id);
+
+    var selected = $("input[name='property']:checked").val();
+
+    source_dev.attr("fill", function(d) { 
+      return get_node_colour(selected, n.p[selected]);
+    });
+
+      var start = get_symbol_centroid(source_dev);
+      var ends = [];
+
+    var recv_evts = find_recv_event(data.events, send_evt);
+    for (var i = 0; i < recv_evts.length; i++) {
+      var target_dev = d3.select("." + recv_evts[i].dev)
+      ends.push(get_symbol_centroid(target_dev));
+
+    }
+
+    message_animation(start, ends);
+
+      function get_symbol_centroid(circle) {
+        var bibox = circle._groups[0][0].getBBox();
+
+        var t = get_translation(d3.select(circle.node()).attr("transform")),
+          x = t[0] + (bibox.x + bibox.width)/2 - bibox.width / 4,
+          y = t[1] + (bibox.y + bibox.height)/2 - bibox.height / 4;
+        return x + ", " + y;
+    }
+
+    function get_translation(transform) {
+        var g = document.createElementNS("http://www.w3.org/2000/svg", "g")
+        g.setAttributeNS(null, "transform", transform);
+        var matrix = g.transform.baseVal.consolidate().matrix;
+        
+        return [matrix.e, matrix.f];
+      }
+
+    function message_animation(s, es) {
+      var markers = [];
+
+      for (var i = 0; i < es.length; i++) {
+        markers.push(g.append("circle"));
+        markers[i].attr("r", 4)
+          .attr("class", "marker")
+          .attr("fill", "green")
+            .attr("transform", "translate(" + s + ")");
+
+        markers[i].transition()
+              .duration(message_passing_time)
+              .attr("transform", "translate(" + es[i] + ")")
+              .remove();
+      }
+      
+    }
+
+    function find_recv_event(events, send) {
+      var send_id = send.eventId;
+
+      var recv_evts = [];
+
+      for (var i = 0; i < events.recv.length; i++) {
+
+        if (events.recv[i].sendEventId === send_id) {
+          recv_evts.push(events.recv[i]);
+        }
+      }
+
+      return recv_evts;
+    }
+
+  }
 }
 
 
-function find_edges_by_source_id(edges, source_id) {
+function find_edges_within_subgraph(edges, source_id, nodes) {
     var edgeList = []
     for (var i = 0; i < edges.length; i++) {
-        if (edges[i].source === source_id) {
+        if (edges[i].source == source_id && nodes.has(edges[i].target)) {
                 edgeList.push(edges[i]);
         }
     }

@@ -348,10 +348,6 @@ function ForceGraph(selector, data) {
 }
 
 
-function nodes, id)[
- ]return nodes[id];
-}
-
 function find_edges_by_source_id(edges, source_id) {
 	var edgeList = []
 	for (var i = 0; i < edges.length; i++) {
@@ -372,11 +368,5 @@ function get_last_child(xmln) {
     return x;
 }
 
-function load_property_menu(props) {
-	for (var p = 0; p < props.length; p++) {
-		var radio = $('<input type="radio" name="property" value= "' + props[p] + '">' + props[p] + '<br>');
-    	radio.appendTo('#property-menu');
-	}
 
-}
 

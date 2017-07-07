@@ -165,3 +165,11 @@ function load_graph_events(filename) {
 	xmlhttp.send();
 	return xmlhttp.onreadystatechange();
 }
+
+function load_property_menu(props) {
+	for (var p = 0; p < props.length; p++) {
+		var radio = $('<input type="radio" name="property" value= "' + props[p] + '">' + props[p] + '<br>');
+    	radio.appendTo('#property-menu');
+	}
+
+}
