@@ -196,7 +196,7 @@
       </DeviceType>
     </DeviceTypes>
   </GraphType>
-  <GraphInstance id="heat_16_16" graphTypeId="ising_spin">
+  <GraphInstance id="ising_spin_16_2" graphTypeId="ising_spin">
     <Properties>"endTime": 100, "width": 16, "probabilities": [0.017986209962091555, 0.11920292202211755, 0.5, 0.8807970779778824, 0.9820137900379085, 0.9820137900379085, 0.8807970779778824, 0.5, 0.11920292202211755, 0.017986209962091555], "height": 16</Properties>
     <DeviceInstances>
       <DevI id="n_0_14" type="cell">

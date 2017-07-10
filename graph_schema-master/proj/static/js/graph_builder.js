@@ -57,8 +57,6 @@ function ForceGraph(selector, data) {
 				    	.enter().append("line")
 							      	.attr("stroke", "#cccccc");
 
-		console.log(d3.values(data.nodes))
-
 		node = g.append("g")
 				    .attr("class", "nodes")
 				    .selectAll(".device") // TODO: device shape

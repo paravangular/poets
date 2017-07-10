@@ -1,4 +1,4 @@
-from core import *
+from graph.core import *
 
 import xml.etree.ElementTree as ET
 from lxml import etree
@@ -362,6 +362,3 @@ def load_graph(src,basePath):
     for x in graphInstances.values():
         return x
 
-
-
-# load_graph("/media/data/CS/ImperialProjects/I/graph_schema-master/proj/data/ising_spin_16_2.xml", "/media/data/CS/ImperialProjects/I/graph_schema-master/proj/data/ising_spin_16_2.xml")

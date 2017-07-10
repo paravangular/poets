@@ -88,16 +88,19 @@ class RecvEvent(DeviceEvent):
 
 class LogWriter(object):
     def __init__(self):
-        pass
+        self.log = {};
 
     def onInitEvent(self,initEvent):
-        raise NotImplementedError
+        if initEvent.eventId not in self.log:
+            self.log[initEvent.eventId] = initEvent
     
     def onSendEvent(self,sendEvent):
-        raise NotImplementedError
+        if sendEvent.eventId not in self.log:
+            self.log[sendEvent.eventId] = sendEvent
     
-    def onRecvEvent(self,sendEvent):
-        raise NotImplementedError
+    def onRecvEvent(self,recvEvent):
+        if recvEvent.eventId not in self.log:
+            self.log[recvEvent.eventId] = recvEvent
 
 def extractInitEvent(n,writer):
     eventId=get_attrib(n,"eventId")

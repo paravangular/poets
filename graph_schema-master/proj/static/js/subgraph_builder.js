@@ -4,7 +4,7 @@ function SubGraph(selector, data) {
    	var height = window.innerHeight * 0.98;
   	var _data = data;
   	var active_node = init_active_node();
-  	var subgraph = {"nodes": [], "edges": []};
+  	var subgraph = {"nodes": {}, "edges": []};
   	var adj = {};
     
     
@@ -46,7 +46,7 @@ function SubGraph(selector, data) {
    	}
 
    	this.draw = function() {
-      console.log(subgraph)
+     
         var simulation = d3.forceSimulation()
                     .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50).strength(1))
                     .force("charge", d3.forceManyBody())
@@ -61,14 +61,19 @@ function SubGraph(selector, data) {
 
         node = g.append("g")
                     .attr("class", "nodes")
-                    .selectAll(".device") // TODO: device shape
-                    .data(subgraph.nodes)
+                    .selectAll(".device")
+                    .data(d3.values(subgraph.nodes))
                     .enter().append("path")
                     .attr("class", function(d) { return "device " + d.id })
                     .attr("d", d3.symbol().size(300).type(d3.symbolCircle))
                     .attr("fill", function(d) { 
                         var selected = $("input[name='property']:checked").val();
-                        return get_node_colour(selected, d.p[selected])
+
+                        if (typeof(selected) != 'undefined') {
+                          return get_node_colour(selected, d.p[selected])
+                        }
+
+                        return "#000000";
                     })
                     .attr("stroke", "#FFFFFF")
                     .attr("stroke-width", "2px")
@@ -115,7 +120,7 @@ function SubGraph(selector, data) {
                     .on("drag", dragged)
                     .on("end", dragended));
 
-        simulation.nodes(subgraph.nodes)
+        simulation.nodes(d3.values(subgraph.nodes))
                     .on("tick", ticked);
 
         simulation.force("link")
@@ -209,11 +214,11 @@ function SubGraph(selector, data) {
         }
 
         nodes.forEach(function(node) {
-            subgraph.nodes.push(data.nodes[node]);
+            subgraph.nodes[node] = data.nodes[node];
         })
 
-        for (var i = 0; i < subgraph.nodes.length; i++) {
-            subgraph.edges = subgraph.edges.concat(find_edges_within_subgraph(data.edges, subgraph.nodes[i].id, nodes));
+        for (var node in subgraph.nodes) {
+            subgraph.edges = subgraph.edges.concat(find_edges_within_subgraph(data.edges, node, nodes));
         }
 
     }
@@ -358,7 +363,7 @@ this.clear = function() {
     message_animation(start, ends);
 
       function get_symbol_centroid(circle) {
-        var bibox = circle._groups[0][0].getBBox();
+        var bibox = d3.select(circle).node().getBBox();
 
         var t = get_translation(d3.select(circle.node()).attr("transform")),
           x = t[0] + (bibox.x + bibox.width)/2 - bibox.width / 4,
