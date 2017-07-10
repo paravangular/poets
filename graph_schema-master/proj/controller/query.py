@@ -3,10 +3,11 @@ from google.cloud import bigquery
 import schemas
 import time
 
+PROJECT = 'poets-172210'
 
 class BiqQueryLoader():
 	def __init__(self, dataset_name):
-		self.client = bigquery.Client()
+		self.client = bigquery.Client(project = PROJECT)
 		self.dataset_name = dataset_name
 		self.dataset = self.create_dataset(dataset_name)
 		self.create_tables(dataset_name)
@@ -68,6 +69,3 @@ class BiqQueryLoader():
 	            return
 	        time.sleep(1)
 
-
-
-loader = BiqQueryLoader('ising_spin_16_2')

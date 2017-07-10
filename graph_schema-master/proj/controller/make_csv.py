@@ -1,8 +1,8 @@
 import json
 
-from graph.core import *
-from graph.events import *
-from graph.load_xml import *
+from controller.graph.core import *
+from controller.graph.events import *
+from controller.graph.load_xml import *
 
 
 def format_properties(props):

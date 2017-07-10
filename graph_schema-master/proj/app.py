@@ -6,8 +6,8 @@ import logging
 import webapp2
 from google.cloud import bigquery
 
-import controller.make_csv
-# import controller.query
+from controller import make_csv
+from controller import query
 
 from google.appengine.api import app_identity
 
@@ -35,16 +35,17 @@ class MainPage(webapp2.RequestHandler):
         temp_path = 'templates/main.html'
         self.response.out.write(template.render(temp_path,temp_data))
 
-#     def post(self):
-#         # local_file = self.request.get('filename')
-#         # local = self.request.get('local')
+    def post(self):
+        local_file = self.request.get('filename')
+        local = self.request.get('local')
 
-#         # if local:
-#         #     # make_csv.make_database('data/' + filename + '.xml', 'data/' + filename + '_event.xml')
-#         #     # loader = query.BiqQueryLoader(filename)
-#         # else:
-#         #     graph_xml = self.request.get('graph_xml')
-#         #     event_xml = self.request.get('event_xml')
+        if local:
+            print('data/' + local_file + '_event.xml')
+            make_csv.make_database('data/' + local_file + '.xml', 'data/' + local_file + '_event.xml')
+            loader = query.BiqQueryLoader(local_file)
+        else:
+            graph_xml = self.request.get('graph_xml')
+            event_xml = self.request.get('event_xml')
 
 
 # class UploadHandler(webapp2.RequestHandler):

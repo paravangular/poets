@@ -51,7 +51,7 @@ class MessageEvent(DeviceEvent):
         )
         self.port=port
         
-class SendEvent(DeviceEvent):
+class SendEvent(MessageEvent):
     def __init__(self,
         eventId, time, elapsed,
         dev, rts, seq, L, S,
@@ -68,7 +68,7 @@ class SendEvent(DeviceEvent):
         self.M=M
         self.type="send"
 
-class RecvEvent(DeviceEvent):
+class RecvEvent(MessageEvent):
     def __init__(self,
         eventId, time, elapsed,
         dev, rts, seq, L, S,
