@@ -4,86 +4,6 @@ from graph.core import *
 from graph.events import *
 from graph.load_xml import *
 
-"""
-Table Schemas
-** BigQuery provides JSON functions so no schema needs to be provided
-
-Graphs
-	- id
-	- type
-	- properties : JSON string
-	- metadata : JSON string
-
-DeviceTypes
-	- id
-	- parent
-	- state : JSON string / List
-	- properties : JSON string / List
-	- inputs : JSON string
-	- outputs : JSON string
-	- ports : JSON string
-	- metadata
-
-DeviceInstances
-	- id
-	- parent
-	- type
-	- properties : JSON string
-	- state : JSON string
-
-EdgeInstances
-	- sourceId
-	- destId
-	- sourcePort
-	- destPort
-	- properties : JSON string
-	- state : JSON string
-
-Events
-	- id
-	- type
-	- dev
-	- time
-	- elapsed
-	- rts
-	- seq
-	- L
-	- S
-	- port : optional
-	- M : optional
-	- cancel : optional
-	- fanout : optional
-
-RecvEvents
-	- id
-	- sendEventId
-	- dev
-	- time
-	- elapsed
-	- rts
-	- seq
-	- port
-	- L
-	- S
-
-SendEvents
-	- id
-	- dev
-	- time
-	- elapsed
-	- rts
-	- seq
-	- port
-	- cancel
-	- fanout
-	- L
-	- S
-	- M
-
-Snapshots
-
-
-"""
 
 def format_properties(props):
 	if props is None:
@@ -172,21 +92,6 @@ def make_edge_instance_row(edges):
 
 
 def make_event_row(events):
-	"""
-	    self.eventId=eventId
-        self.time=time
-        self.elapsed=elapsed
-        self.dev=dev
-        self.rts=rts
-        self.seq=seq
-        self.L=L
-        self.S=S
-        self.port
-        self.M
-        self.cancel
-        self.fanout
-        self.sendEventId
-    """
 	header = "event_id|time|elapsed|dev|rts|seq|L|S|M|port|cancel|fanout|send_event_id|type\n"
 	content = ""
 
@@ -231,4 +136,12 @@ def make_database(graph_src, event_src):
 	edge_instance_table.write(edge_instance_csv)
 	event_table.write(events_csv)
 
-make_database("/media/data/CS/ImperialProjects/I/graph_schema-master/proj/data/ising_spin_16_2.xml", "/media/data/CS/ImperialProjects/I/graph_schema-master/proj/data/ising_spin_16_2_event.xml")
+
+# def write_csv_to_cloud(filename, csv):
+# 	write_retry_params = cloudstorage.RetryParams(backoff_factor=1.1)
+# 	with cloudstorage.open(
+# 		filename, 'w+', content_type='text/xml', retry_params=write_retry_params) as cloudstorage_file:
+# 			cloudstorage_file.write(csv)
+#     self.tmp_filenames_to_clean_up.append(filename)
+
+# make_database("data/ising_spin_16_2.xml", "data/ising_spin_16_2_event.xml")

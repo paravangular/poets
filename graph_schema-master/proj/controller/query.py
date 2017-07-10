@@ -3,6 +3,7 @@ from google.cloud import bigquery
 import schemas
 import time
 
+
 class BiqQueryLoader():
 	def __init__(self, dataset_name):
 		self.client = bigquery.Client()
@@ -66,5 +67,7 @@ class BiqQueryLoader():
 	                raise RuntimeError(job.errors)
 	            return
 	        time.sleep(1)
+
+
 
 loader = BiqQueryLoader('ising_spin_16_2')

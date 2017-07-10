@@ -113,7 +113,6 @@ function ForceGraph(selector, data) {
 			        .on("drag", dragged)
 			        .on("end", dragended));
 
-		console.log(d3.values(data.nodes))
 		simulation.nodes(d3.values(data.nodes))
 	      			.on("tick", ticked);
 
@@ -184,7 +183,6 @@ function ForceGraph(selector, data) {
 
    	this.change_colour = function(prop) {
    		set_prop_domain(prop);
-   		console.log(prop_domain);
    	}
 
 	this.stop_poets_simulation = function() {
@@ -358,7 +356,6 @@ function find_edges_by_source_id(edges, source_id) {
 }
 
 function get_last_child(xmln) {
-	console.log(xmln);
     var x = xmln.lastChild;
     while (x.nodeType != 1) {
         x = x.previousSibling;

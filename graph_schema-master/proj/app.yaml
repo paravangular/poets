@@ -1,8 +1,9 @@
-application: poets
-version: 1
 runtime: python27
 api_version: 1
 threadsafe: true
+libraries:
+- name: lxml
+  version: latest
 
 handlers:
 - url: /
@@ -19,9 +20,6 @@ handlers:
 
 - url: /data
   static_dir: data
-
-# - url: /lib
-#   static_dir: lib
 
 - url: /static/js
   static_dir: static/js

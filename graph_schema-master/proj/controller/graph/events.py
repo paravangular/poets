@@ -5,23 +5,20 @@ import sys
 import xml.etree.ElementTree as ET
 from lxml import etree
 
+from controller.graph.core import expand_typed_data
 
-from typing import *
-
-from graph.core import expand_typed_data
-
-from graph.load_xml import *
+from controller.graph.load_xml import *
 
 class Event(object):
-    def __init__(self, eventId:str, time:float, elapsed:float):
+    def __init__(self, eventId, time, elapsed):
         self.eventId=eventId
         self.time=time
         self.elapsed=elapsed
         
 class DeviceEvent(Event):
     def __init__(self,
-        eventId:str, time:float, elapsed:float,
-        dev:str, rts:int, seq:int, L:List[str], S:Optional[dict]
+        eventId, time, elapsed,
+        dev, rts, seq, L, S
     ):
         Event.__init__(self, eventId, time, elapsed)
         self.dev=dev
@@ -32,8 +29,8 @@ class DeviceEvent(Event):
 
 class InitEvent(DeviceEvent):
     def __init__(self,
-        eventId:str, time:float, elapsed:float,
-        dev:str, rts:int, seq:int, L:List[str], S:Optional[dict]
+        eventId, time, elapsed,
+        dev, rts, seq, L, S
     ):
         DeviceEvent.__init__(self,
             eventId,time,elapsed,
@@ -44,9 +41,9 @@ class InitEvent(DeviceEvent):
 
 class MessageEvent(DeviceEvent):
     def __init__(self,
-        eventId:str, time:float, elapsed:float,
-        dev:str, rts:int, seq:int, L:List[str], S:Optional[dict],
-        port:str
+        eventId, time, elapsed,
+        dev, rts, seq, L, S,
+        port
     ):
         DeviceEvent.__init__(self,
             eventId,time,elapsed,
@@ -56,10 +53,10 @@ class MessageEvent(DeviceEvent):
         
 class SendEvent(DeviceEvent):
     def __init__(self,
-        eventId:str, time:float, elapsed:float,
-        dev:str, rts:int, seq:int, L:List[str], S:Optional[dict],
-        port:str,
-        cancel:bool, fanout:int, M:Optional[dict]
+        eventId, time, elapsed,
+        dev, rts, seq, L, S,
+        port,
+        cancel, fanout, M
     ):
         MessageEvent.__init__(self,
             eventId,time,elapsed,
@@ -73,10 +70,10 @@ class SendEvent(DeviceEvent):
 
 class RecvEvent(DeviceEvent):
     def __init__(self,
-        eventId:str, time:float, elapsed:float,
-        dev:str, rts:int, seq:int, L:List[str], S:Optional[dict],
-        port:str,
-        sendEventId:str
+        eventId, time, elapsed,
+        dev, rts, seq, L, S,
+        port,
+        sendEventId
     ):
         MessageEvent.__init__(self,
             eventId,time,elapsed,

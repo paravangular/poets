@@ -1,4 +1,4 @@
-from graph.core import *
+from controller.graph.core import *
 
 import xml.etree.ElementTree as ET
 from lxml import etree
