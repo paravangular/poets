@@ -1,4 +1,7 @@
 import json
+import uuid
+import cloudstorage as gcs
+from google.appengine.api import app_identity
 
 from controller.graph.core import *
 from controller.graph.events import *
@@ -110,7 +113,7 @@ def make_event_row(events):
 	return header + content
 
 
-def make_database(graph_src, event_src):
+def make_local_database(graph_src, event_src):
 	graph_table = open("data/graph_instances.csv", "w+")
 	device_instance_table = open("data/device_instances.csv", "w+")
 	device_type_table = open("data/device_types.csv", "w+")
@@ -137,11 +140,34 @@ def make_database(graph_src, event_src):
 	event_table.write(events_csv)
 
 
-# def write_csv_to_cloud(filename, csv):
-# 	write_retry_params = cloudstorage.RetryParams(backoff_factor=1.1)
-# 	with cloudstorage.open(
-# 		filename, 'w+', content_type='text/xml', retry_params=write_retry_params) as cloudstorage_file:
-# 			cloudstorage_file.write(csv)
-#     self.tmp_filenames_to_clean_up.append(filename)
+class CloudStorageBuilder():
+	def __init__(self, page_handler): 
+		self.bucket_name = os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name())
+		self.page_handler = page_handler
+	
+	def make_cloud_database(self, graph_src, event_src):
+		graph = load_graph(graph_src, graph_src)
+		graph_instance_csv = make_graph_instance_row(graph)
+		device_instance_csv = make_dev_instance_row(graph.device_instances)
+		device_types_csv = make_dev_type_row(graph.device_instances)
+		edge_instance_csv = make_edge_instance_row(graph.edge_instances)
+		events = LogWriter()
+		parseEvents(event_src, events)
+		events_csv = make_event_row(events.log)
+		self.write_csv_to_cloud('graph_instances.csv', graph_instance_csv)
+		self.write_csv_to_cloud('device_instances.csv', device_instance_csv)
+		self.write_csv_to_cloud('device_types.csv', device_types_csv[0])
+		self.write_csv_to_cloud('device_ports.csv', device_types_csv[1])
+		self.write_csv_to_cloud('edge_instances.csv', edge_instance_csv)
+		self.write_csv_to_cloud('events.csv', events_csv)
 
-# make_database("data/ising_spin_16_2.xml", "data/ising_spin_16_2_event.xml")
+	def write_csv_to_cloud(self, filename, content):
+		filename = '/' + self.bucket_name + '/' + filename
+		write_retry_params = gcs.RetryParams(backoff_factor=1.1)
+		gcs_file = gcs.open(filename,
+                      'w',
+                      content_type='text/csv',
+                      retry_params=write_retry_params)
+		gcs_file.write(content)
+		gcs_file.close()
+		self.page_handler.tmp_filenames_to_clean_up.append(filename)

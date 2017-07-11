@@ -1,32 +1,47 @@
 # Imports the Google Cloud client library
 from google.cloud import bigquery
+from google.oauth2 import service_account
 import schemas
 import time
+import os
+import uuid
+
+import cloudstorage as gcs
+from google.appengine.api import app_identity
 
 PROJECT = 'poets-172210'
 
 class BiqQueryLoader():
 	def __init__(self, dataset_name):
-		self.client = bigquery.Client(project = PROJECT)
+		credentials = service_account.Credentials.from_service_account_file('./keys/service-account.json')
+		self.client = bigquery.Client(project = PROJECT, credentials=credentials)
 		self.dataset_name = dataset_name
-		self.dataset = self.create_dataset(dataset_name)
-		self.create_tables(dataset_name)
-		load_all_data(dataset_name)
+		self.dataset = self.find_dataset(dataset_name)
+
+		print('Dataset {} created.'.format(self.dataset.name))
+		self.create_tables()
+		self.load_all_data()
+
+	def find_dataset(self, dataset_name):
+		for dataset in self.client.list_datasets():
+			if dataset_name == dataset.name:
+				return dataset
+
+		return self.create_dataset(dataset_name)
 
 	def create_dataset(self, dataset_name):
 		dataset = self.client.dataset(dataset_name)
 		dataset.create()
 
-		print('Dataset {} created.'.format(self.dataset.name))
 		return dataset
 
 	def create_tables(self):
-		self.create_table(self.dataset, 'graph_instances', schemas.GRAPH_INSTANCE_SCHEMA)
-		self.create_table(self.dataset, 'device_instances', schemas.DEVICE_INSTANCE_SCHEMA)
-		self.create_table(self.dataset, 'device_types', schemas.DEVICE_TYPE_SCHEMA)
-		self.create_table(self.dataset, 'device_ports', schemas.DEVICE_PORT_SCHEMA)
-		self.create_table(self.dataset, 'edge_instances', schemas.EDGE_INSTANCE_SCHEMA)
-		self.create_table(self.dataset, 'events', schemas.EVENT_SCHEMA)
+		self.create_table('graph_instances', schemas.GRAPH_INSTANCE_SCHEMA)
+		self.create_table('device_instances', schemas.DEVICE_INSTANCE_SCHEMA)
+		self.create_table('device_types', schemas.DEVICE_TYPE_SCHEMA)
+		self.create_table('device_ports', schemas.DEVICE_PORT_SCHEMA)
+		self.create_table('edge_instances', schemas.EDGE_INSTANCE_SCHEMA)
+		self.create_table('events', schemas.EVENT_SCHEMA)
 
 
 	def create_table(self, table_name, schema):
@@ -37,27 +52,25 @@ class BiqQueryLoader():
 			print('Table {} already exists.'.format(table_name))
 
 	def load_all_data(self):
-		self.load_data_from_file('graph_instances', 'data/graph_instances.csv')
-		self.load_data_from_file('device_instances', 'data/device_instances.csv')
-		self.load_data_from_file('device_types', 'data/device_types.csv')
-		self.load_data_from_file('device_ports', 'data/device_ports.csv')
-		self.load_data_from_file('device_ports', 'data/device_ports.csv')
-		self.load_data_from_file('events', 'data/events.csv')
+		self.load_data_from_storage('graph_instances', 'graph_instances.csv')
+		self.load_data_from_storage('device_instances', 'device_instances.csv')
+		self.load_data_from_storage('device_types', 'device_types.csv')
+		self.load_data_from_storage('device_ports', 'device_ports.csv')
+		self.load_data_from_storage('device_ports', 'device_ports.csv')
+		self.load_data_from_storage('events', 'events.csv')
 
 
-	def load_data_from_file(self, table_name, source_file_name):
-	    table = self.dataset.table(table_name)
+	def load_data_from_storage(self, table_name, source):
+		source = 'gs://' + os.environ.get('BUCKET_NAME', app_identity.get_default_gcs_bucket_name()) + '/' + source
+		table = self.dataset.table(table_name)
+		table.reload()
+		job_name = str(uuid.uuid4())
+		job = self.client.load_table_from_storage(job_name, table, source)
 
-	    table.reload()
+		job.begin()
+		self.wait_for_job(job)
 
-	    with open(source_file_name, 'rb') as source_file:
-	        job = table.upload_from_file(
-	            source_file, source_format='text/csv', skip_leading_rows=1, field_delimiter="|")
-
-	    self.wait_for_job(job)
-
-	    print('Loaded {} rows into {}:{}.'.format(
-	        job.output_rows, self.dataset_name, table_name))
+		print('Loaded {} rows into {}:{}.'.format(job.output_rows, self.dataset_name, table_name))
 
 
 	def wait_for_job(self, job):

@@ -1,10 +1,14 @@
 import os 
+import sys
 
+import cloudstorage as gcs
+from google.cloud import bigquery
 from google.appengine.ext.webapp import template
 from webapp2_extras import sessions
 import logging
 import webapp2
-from google.cloud import bigquery
+
+import os.path
 
 from controller import make_csv
 from controller import query
@@ -30,7 +34,7 @@ class BaseHandler(webapp2.RequestHandler):
 
         
 class MainPage(webapp2.RequestHandler):
-    def get(self):
+    def get(self):  
         temp_data = {}
         temp_path = 'templates/main.html'
         self.response.out.write(template.render(temp_path,temp_data))
@@ -38,14 +42,15 @@ class MainPage(webapp2.RequestHandler):
     def post(self):
         local_file = self.request.get('filename')
         local = self.request.get('local')
+        self.tmp_filenames_to_clean_up = []
 
-        if local:
-            print('data/' + local_file + '_event.xml')
-            make_csv.make_database('data/' + local_file + '.xml', 'data/' + local_file + '_event.xml')
+        if local:            
+            builder = make_csv.CloudStorageBuilder(self)
+            builder.make_cloud_database('data/' + local_file + '.xml', 'data/' + local_file + '_event.xml')
             loader = query.BiqQueryLoader(local_file)
-        else:
-            graph_xml = self.request.get('graph_xml')
-            event_xml = self.request.get('event_xml')
+        # else:
+        #     graph_xml = self.request.get('graph_xml')
+        #     event_xml = self.request.get('event_xml')
 
 
 # class UploadHandler(webapp2.RequestHandler):

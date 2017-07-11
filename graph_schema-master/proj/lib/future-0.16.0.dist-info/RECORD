@@ -247,8 +247,8 @@ winreg/__init__.py,sha256=JuX4_LacOg48xmn0oERhWRtqHKTu5FPTSERX3b4IEBk,377
 xmlrpc/__init__.py,sha256=cuI7TcJ1aevAtq79-IIox_ohWc4ZvsA_xDG4GVd1KT8,335
 xmlrpc/client.py,sha256=S14IklVTxdFPcsX8s1qYP50FbjVuKAaz63jcg9Vb7zs,106
 xmlrpc/server.py,sha256=S14IklVTxdFPcsX8s1qYP50FbjVuKAaz63jcg9Vb7zs,106
-../../bin/pasteurize,sha256=ED7sruJwEoYFzddrHYRmCn1lpeOvF0sW_gIrSowmEVA,220
-../../bin/futurize,sha256=dhrJIUT1GGetPKfDfAB1z7PPgvvbYV_2fldrK0dkU6k,218
+../../bin/pasteurize,sha256=FCw_0wEd2tRkwLJVClIYS_foIk7G58_KkHyBPTuzt5Y,259
+../../bin/futurize,sha256=qJrOTU9xNmlvzUPsolLaHo_i7n6p3ScS-my1kSCVBh8,257
 future-0.16.0.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
 future/backports/urllib/__init__.pyc,,
 future/backports/email/encoders.pyc,,

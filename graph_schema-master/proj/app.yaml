@@ -29,3 +29,6 @@ handlers:
 
 - url: /static/css
   static_dir: static/css
+
+- url: /.*
+  script: app.application
