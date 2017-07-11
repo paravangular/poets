@@ -10,7 +10,7 @@ import webapp2
 
 import os.path
 
-from controller import make_csv
+from controller import make_json
 from controller import query
 
 from google.appengine.api import app_identity
@@ -35,6 +35,10 @@ class BaseHandler(webapp2.RequestHandler):
         
 class MainPage(webapp2.RequestHandler):
     def get(self):  
+        local_file = 'ising_spin_16_2'
+        stream_builder = make_json.JSONStreamBuilder('data/' + local_file + '.xml', 'data/' + local_file + '_event.xml')
+        loader = query.BiqQueryLoader(local_file, stream_builder)
+
         temp_data = {}
         temp_path = 'templates/main.html'
         self.response.out.write(template.render(temp_path,temp_data))

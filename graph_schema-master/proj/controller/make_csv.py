@@ -2,10 +2,12 @@ import json
 import uuid
 import cloudstorage as gcs
 from google.appengine.api import app_identity
+from google.appengine.ext import blobstore
 
 from controller.graph.core import *
 from controller.graph.events import *
 from controller.graph.load_xml import *
+
 
 
 def format_properties(props):
@@ -160,6 +162,9 @@ class CloudStorageBuilder():
 		self.write_csv_to_cloud('device_ports.csv', device_types_csv[1])
 		self.write_csv_to_cloud('edge_instances.csv', edge_instance_csv)
 		self.write_csv_to_cloud('events.csv', events_csv)
+
+	def write_csv_to_blob(self, filename, content):
+		upload_url = blobstore.create_upload_url()
 
 	def write_csv_to_cloud(self, filename, content):
 		filename = '/' + self.bucket_name + '/' + filename
