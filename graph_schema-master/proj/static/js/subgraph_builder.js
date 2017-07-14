@@ -46,6 +46,7 @@ function SubGraph(selector, data) {
    	}
 
    	this.draw = function() {
+        // TODO: set boundary nodes to circular perimeter
      
         var simulation = d3.forceSimulation()
                     .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50).strength(1))

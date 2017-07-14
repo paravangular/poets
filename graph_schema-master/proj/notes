@@ -6,9 +6,20 @@ heatmaps for number of messages received
 
 
 
-two week aim
-	- integrate bigquery
+AIMS
+	JULY
+	- bigquery querying
 	- device view
 		- ports
-		- animated real-time messages
-	- dynamic zoom with centralised node
+		- circular view
+		- messages
+	- dynamic zoom
+		- graph subsetting with fixed border nodes
+		- fast algo to extend
+		- messages
+	AUGUST
+	- overall
+		- new dev property: number of messages sent/recv
+		- new edge property: number of messages traveling via that node
+	- heatmap overview (aggregation)
+	- benchmarking

@@ -14,7 +14,40 @@ from controller import make_json
 
 PROJECT = 'poets-172210'
 
-class BiqQueryLoader():
+class BigQueryHandler():
+    def __init__(self, dataset_name):
+        credentials = service_account.Credentials.from_service_account_file('./keys/service-account.json')
+        self.client = bigquery.Client(project = PROJECT, credentials=credentials)
+        self.dataset_name = dataset_name
+        self.dataset = self.find_dataset(dataset_name)
+
+    def get_whole_graph(self):
+        graph = {"nodes": {}, "edges": [], "events": []}
+        devices = ('SELECT * FROM device_instances')
+        edges = ('SELECT * FROM edge_instances')
+        events = ('SELECT * FROM events')
+        device_query = self.client.run_sync_query(devices)
+        device_query.timeout_ms = TIMEOUT_MS
+        device_query.run()
+
+        for d in device_query.rows:
+            for i in range(schemas.DEVICE_INSTANCE_SCHEMA):
+                graph.nodes[d.f[0].v][schemas.DEVICE_INSTANCE_SCHEMA[i].name] = d.f[i].v
+
+        for e in edge_query.rows:
+            edge = {}
+            for i in range(schemas.EDGE_INSTANCE_SCHEMA):
+                edge[schemas.EDGE_INSTANCE_SCHEMA[i].name] = e.f[i].v
+            graph.edges.append(edge)
+
+        for e in event_query.rows:
+            event = {}
+            for i in range(schemas.event_INSTANCE_SCHEMA):
+                event[schemas.event_INSTANCE_SCHEMA[i].name] = e.f[i].v
+            graph.events.append(event)
+
+
+class BigQueryLoader():
     def __init__(self, dataset_name, stream_builder):
         credentials = service_account.Credentials.from_service_account_file('./keys/service-account.json')
         self.client = bigquery.Client(project = PROJECT, credentials=credentials)

@@ -37,7 +37,7 @@ class MainPage(webapp2.RequestHandler):
     def get(self):  
         local_file = 'ising_spin_16_2'
         stream_builder = make_json.JSONStreamBuilder('data/' + local_file + '.xml', 'data/' + local_file + '_event.xml')
-        loader = query.BiqQueryLoader(local_file, stream_builder)
+        loader = query.BigQueryLoader(local_file, stream_builder)
 
         temp_data = {}
         temp_path = 'templates/main.html'
