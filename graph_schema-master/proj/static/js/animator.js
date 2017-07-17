@@ -1,8 +1,8 @@
-function Event(event) {
-	var source_device,
-		source_port,
-		target_device,
-		target_port,
+function Message(send_event, recv_event) {
+	var source_device = send_event.dev,
+		source_port = send_event.port,
+		target_device = recv_event.dev,
+		target_port = recv_event.port,
 		event_duration = 100 // default
 
 	/*
@@ -26,7 +26,7 @@ function Event(event) {
 		function transition(marker) {
 			marker.transition()
 			    .duration(event_duration)
-			    .attrTween("transform", translateAlong(path.node()))
+			    .attrTween("transform", translate_along(path.node()))
 			    .remove();
 		}
 
@@ -39,6 +39,16 @@ function Event(event) {
         		y = t[1] + (bibox.y + bibox.height)/2 - bibox.height / 4;
         	return x + ", " + y;
     	}
+
+    	function translate_along(path) {
+			var l = path.getTotalLength();
+			return function(d, i, a) {
+				return function(t) {
+		    		var p = path.getPointAtLength(t * l);
+		    		return "translate(" + p.x + "," + p.y + ")";
+		    	};
+			};
+		}
 
 	}
 

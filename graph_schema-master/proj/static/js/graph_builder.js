@@ -55,7 +55,8 @@ function ForceGraph(selector, data) {
 				    	.selectAll("line")
 				    	.data(data.edges)
 				    	.enter().append("line")
-							      	.attr("stroke", "#cccccc");
+						.attr("stroke", "#cccccc")
+						.attr("class", function(d) { return d.source + ":" + d.target });
 
 		node = g.append("g")
 				    .attr("class", "nodes")
