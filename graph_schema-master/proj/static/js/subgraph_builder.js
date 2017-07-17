@@ -58,7 +58,8 @@ function SubGraph(selector, data) {
                         .selectAll("line")
                         .data(subgraph.edges)
                         .enter().append("line")
-                                    .attr("stroke", "#cccccc");
+                        .attr("stroke", "#cccccc")
+                        .attr("class", function(d) { edge_class(d)});
 
         node = g.append("g")
                     .attr("class", "nodes")
@@ -126,6 +127,10 @@ function SubGraph(selector, data) {
 
         simulation.force("link")
                     .links(subgraph.edges);
+
+        function edge_class(edge) {
+          return edges.source  + ":" + edges.target;
+        }
 
         function ticked() {
             link
