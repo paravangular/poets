@@ -3,7 +3,7 @@ function Message(send_event, recv_event) {
 		source_port = send_event.port,
 		target_device = recv_event.dev,
 		target_port = recv_event.port,
-		event_duration = 100 // default
+		event_duration = (recv_event.time - send_event.time) * 100 // default
 
 	/*
 	event time
@@ -56,3 +56,5 @@ function Message(send_event, recv_event) {
 		event_duration = time;
 	}
 }
+
+

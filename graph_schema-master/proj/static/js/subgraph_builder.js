@@ -69,13 +69,18 @@ function SubGraph(selector, data) {
                     .attr("class", function(d) { return "device " + d.id })
                     .attr("d", d3.symbol().size(300).type(d3.symbolCircle))
                     .attr("fill", function(d) { 
-                        var selected = $("input[name='property']:checked").val();
+                      if (d.id == active_node) {
+                        return "red"
+                      } else {
 
-                        if (typeof(selected) != 'undefined') {
-                          return get_node_colour(selected, d.p[selected])
+                          var selected = $("input[name='property']:checked").val();
+
+                          if (typeof(selected) != 'undefined') {
+                            return get_node_colour(selected, d.p[selected])
+                          }
+
+                          return "#000000";
                         }
-
-                        return "#000000";
                     })
                     .attr("stroke", "#FFFFFF")
                     .attr("stroke-width", "2px")
@@ -129,17 +134,41 @@ function SubGraph(selector, data) {
                     .links(subgraph.edges);
 
         function edge_class(edge) {
-          return edges.source  + ":" + edges.target;
+          return edge.source  + ":" + edge.target;
         }
 
         function ticked() {
             link
-                .attr("x1", function(d) { return d.source.x; })
-                .attr("y1", function(d) { return d.source.y; })
-                .attr("x2", function(d) { return d.target.x; })
-                .attr("y2", function(d) { return d.target.y; });
+                .attr("x1", function(d) { return link_x(d.source); })
+                .attr("y1", function(d) { return link_y(d.source); })
+                .attr("x2", function(d) { return link_x(d.target); })
+                .attr("y2", function(d) { return link_y(d.target); });
 
-            node.attr("transform", function (d) {return "translate(" + d.x + ", " + d.y + ")";});
+            node.attr("transform", function (d) {
+                if (d.id == active_node) { 
+                    if (d.x == width/2 && d.y == height/2) {
+                      return "translate(0, 0)"
+                    } else {
+                      return "translate(" + width/2 + ", " + height/2 + ")"
+                    }
+                } else { return "translate(" + d.x + ", " + d.y + ")";}
+            });
+        }
+
+        function link_x(node) {
+          if (node.id == active_node) {
+            return width / 2;
+          } else {
+            return node.x;
+          }
+        }
+
+        function link_y(node) {
+          if (node.id == active_node) {
+            return height / 2;
+          } else {
+            return node.y;
+          }
         }
 
         function show_device_details(d) {
