@@ -49,7 +49,7 @@ function SubGraph(selector, data) {
         // TODO: set boundary nodes to circular perimeter
      
         var simulation = d3.forceSimulation()
-                    .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50).strength(1))
+                    .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50).strength(0.1))
                     .force("charge", d3.forceManyBody())
                     .force("center", d3.forceCenter(width / 2, height / 2));
 
@@ -66,9 +66,15 @@ function SubGraph(selector, data) {
                     .selectAll(".device")
                     .data(d3.values(subgraph.nodes))
                     .enter().append("path")
-                    .attr("class", function(d) { return "device " + d.id })
-                    .attr("d", d3.symbol().size(300).type(d3.symbolCircle))
-                    .attr("fill", function(d) { 
+                    .attr("class", function(d) { return "device " + d.id + " " + border_node_class(d)})
+                    .attr("d", d3.symbol().size( function(d) {if (d.id == active_node) {
+                        return 500
+                      } else {
+                        return 300;
+                      }
+                    }).type(d3.symbolCircle))
+                    .attr("fill", "#000000")
+                    .attr("stroke", function(d) { 
                       if (d.id == active_node) {
                         return "red"
                       } else {
@@ -79,10 +85,9 @@ function SubGraph(selector, data) {
                             return get_node_colour(selected, d.p[selected])
                           }
 
-                          return "#000000";
+                          return "#FFFFFF";
                         }
                     })
-                    .attr("stroke", "#FFFFFF")
                     .attr("stroke-width", "2px")
                     .on("click", function(d) { 
                         tooltip
@@ -133,11 +138,22 @@ function SubGraph(selector, data) {
         simulation.force("link")
                     .links(subgraph.edges);
 
+        function border_node_class(node) {
+          if (node.depth == max_depth) {
+            return "border-node";
+          } else if (node.depth == max_depth - 1) {
+            return "subborder-node";
+          } else {
+            return "";
+          }
+        }
+
         function edge_class(edge) {
           return edge.source  + ":" + edge.target;
         }
 
         function ticked() {
+          // TODO: incorporate radial depth somehow
             link
                 .attr("x1", function(d) { return link_x(d.source); })
                 .attr("y1", function(d) { return link_y(d.source); })
@@ -227,7 +243,7 @@ function SubGraph(selector, data) {
         var q = [];
         q.push(active_node);
 
-        var nodes = new Set();
+        var nodes = {};
 
         var curr_depth = 0,
             remaining_nodes_at_curr = 1,
@@ -235,7 +251,10 @@ function SubGraph(selector, data) {
 
         while (q.length != 0) {
             var curr = q.shift();
-            nodes.add(curr);
+            
+            if (!(curr in nodes)) {
+              nodes[curr] = curr_depth;
+            }
 
             next_remaining += adj[curr].size;
 
@@ -248,16 +267,27 @@ function SubGraph(selector, data) {
             q = q.concat(Array.from(adj[curr]));
         }
 
-        nodes.forEach(function(node) {
-            subgraph.nodes[node] = data.nodes[node];
-        })
-
-        for (var node in subgraph.nodes) {
-            subgraph.edges = subgraph.edges.concat(find_edges_within_subgraph(data.edges, node, nodes));
+        var i = 0;
+        for (var node in nodes) {
+          subgraph.nodes[node] = data.nodes[node];
+          subgraph.nodes[node].depth = nodes[node];
         }
 
-    }
+        for (var node in subgraph.nodes) {
+          subgraph.edges = subgraph.edges.concat(find_edges_within_subgraph(data.edges, node, nodes));
+        }
 
+        // TODO: only send events
+        var events = [];
+
+        for (var i = 0; i < data.events.send.length; i++) {
+          if (data.events.send[i].dev in subgraph.nodes) {
+            events.push(data.events[i]);
+          }
+        }
+
+        subgraph.events = events;
+    }
 
 
    	this.change_active_node = function(new_node) {
@@ -284,51 +314,6 @@ function SubGraph(selector, data) {
    		}// TODO: http://staff.vbi.vt.edu/maleq/papers/conversion.pdf 
    	}
 
-this.clear = function() {
-      d3.selectAll("g > *").remove();
-    }
-
-    this.change_colour = function(prop) {
-      set_prop_domain(prop);
-      console.log(prop_domain);
-    }
-
-  this.stop_poets_simulation = function() {
-    simulating = false;
-    d3.selectAll("circle.marker").remove();
-
-        $("#stop").prop('disabled', true);
-        $("#start").prop('disabled', false);
-  }
-      
-  this.start_poets_simulation = function() {
-
-        $("#start").prop('disabled', true);
-        $("#stop").prop('disabled', false);
-    simulating = true;
-
-
-    setTimeout(function() {timeout_loop(0)}, 50);
-
-    function timeout_loop(i) {
-      if (simulating) {
-        update_dataset(data, data.events.send[i]);
-          i++;
-          if (i < data.events.send.length) {
-            setTimeout(function(){timeout_loop(i);}, 50);
-          } else {
-            // stop_poets_simulation is not defined?
-            simulating = false;
-          d3.selectAll("circle.marker").remove();
-
-              $("#stop").prop('disabled', true);
-              $("#start").prop('disabled', false);
-          }
-      }
-      
-    }
-
-  }
 
   function get_last_event_time() {
     var sends = data.events.send;
@@ -344,120 +329,21 @@ this.clear = function() {
                 .range([d3.rgb("#007AFF"), d3.rgb('#FF0000')]);
 
         return colour(value);
-    }
-
-
-    function set_prop_domain(prop) {
-      // TODO: to avoid recalculation, store this as property?
-      var min = Number.POSITIVE_INFINITY,
-        max = Number.NEGATIVE_INFINITY;
-
-      var all_events = data.events.send.concat(data.events.recv);
-      
-      for (var i = 0; i < all_events.length; i++) {
-      var p = all_events[i].node_prop[prop];
-
-      if (typeof(p) != "undefined") {
-        min = Math.min(min, p);
-        max = Math.max(max, p);
-        }
-      }
-      
-      prop_domain[0] = min;
-      prop_domain[1] = max;
-    }
-
-  function update_dataset(data, send_evt) {
-    // TODO: disallow animation when force-directed graph is still moving
-    var id = send_evt.dev;
-    var p = send_evt.node_prop;
-
-
-    var n = data.nodes[id];
-    n.p = p;
-
-    // TODO: find better way: use d3 merges?
-    var source_dev = d3.select("." + id);
-
-    var selected = $("input[name='property']:checked").val();
-
-    source_dev.attr("fill", function(d) { 
-      return get_node_colour(selected, n.p[selected]);
-    });
-
-      var start = get_symbol_centroid(source_dev);
-      var ends = [];
-
-    var recv_evts = find_recv_event(data.events, send_evt);
-    for (var i = 0; i < recv_evts.length; i++) {
-      var target_dev = d3.select("." + recv_evts[i].dev)
-      ends.push(get_symbol_centroid(target_dev));
-
-    }
-
-    message_animation(start, ends);
-
-      function get_symbol_centroid(circle) {
-        var bibox = d3.select(circle).node().getBBox();
-
-        var t = get_translation(d3.select(circle.node()).attr("transform")),
-          x = t[0] + (bibox.x + bibox.width)/2 - bibox.width / 4,
-          y = t[1] + (bibox.y + bibox.height)/2 - bibox.height / 4;
-        return x + ", " + y;
-    }
-
-    function get_translation(transform) {
-        var g = document.createElementNS("http://www.w3.org/2000/svg", "g")
-        g.setAttributeNS(null, "transform", transform);
-        var matrix = g.transform.baseVal.consolidate().matrix;
-        
-        return [matrix.e, matrix.f];
-      }
-
-    function message_animation(s, es) {
-      var markers = [];
-
-      for (var i = 0; i < es.length; i++) {
-        markers.push(g.append("circle"));
-        markers[i].attr("r", 4)
-          .attr("class", "marker")
-          .attr("fill", "green")
-            .attr("transform", "translate(" + s + ")");
-
-        markers[i].transition()
-              .duration(message_passing_time)
-              .attr("transform", "translate(" + es[i] + ")")
-              .remove();
-      }
-      
-    }
-
-    function find_recv_event(events, send) {
-      var send_id = send.eventId;
-
-      var recv_evts = [];
-
-      for (var i = 0; i < events.recv.length; i++) {
-
-        if (events.recv[i].sendEventId === send_id) {
-          recv_evts.push(events.recv[i]);
-        }
-      }
-
-      return recv_evts;
-    }
-
   }
+
+
+
 }
 
 
 function find_edges_within_subgraph(edges, source_id, nodes) {
     var edgeList = []
     for (var i = 0; i < edges.length; i++) {
-        if (edges[i].source == source_id && nodes.has(edges[i].target)) {
+        if (edges[i].source == source_id && edges[i].target in nodes) {
                 edgeList.push(edges[i]);
         }
     }
 
     return edgeList;
 }
+
