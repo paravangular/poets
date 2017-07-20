@@ -14,7 +14,7 @@ function SubGraph(selector, data) {
     var message_passing_time = 100;
     var symbol_size = 300;
     var last_event_time = get_last_event_time();
-  	var max_depth = 5;
+  	var max_depth = 2;
 
   	svg = d3.select("body")
       	.append("svg")

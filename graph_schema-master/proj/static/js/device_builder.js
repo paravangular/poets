@@ -32,8 +32,12 @@ function DeviceTree(selector, data, active_device) {
 			}));
 
 	var g = svg.append("g");
+
 	var tree = d3.tree()
-    			.size([height, width]);
+    			.size([height, width])
+    			.separation(function(a, b) {
+				      return a.depth === 0 ? 1 : (a.parent === b.parent ? 1 : 2) / a.depth;
+				  });;
 	
     this.data = function(value) {
     	if(!arguments.length) {
@@ -54,30 +58,28 @@ function DeviceTree(selector, data, active_device) {
 
    		console.log(tree_data);
    		var root = d3.hierarchy(tree_data, function(d) { return d.children; });
-   		
-   		var nodes = tree(root);
-      	var links = nodes.descendants().slice(1);
+   		root.x0 = height / 2;
+       	root.y0 = 0;
+
+   		var nodes = tree(root).descendants();
+   		nodes.forEach(function(d) { d.y = d.depth * 180; });
+      	var links = nodes.slice(1);
 
 		var link = g.selectAll(".link")
-		    .data( nodes.descendants().slice(1))
-		  .enter().append("path")
+		    .data(links)
+		  	.enter().append("path")
 		    .attr("class", "link")
 		    .attr("fill", "none")
 		    .attr("stroke", "#cccccc")
-		    .attr("d", function(d) {
-		       return "M" + d.y + "," + d.x
-		         + "C" + (d.y + d.parent.y) / 2 + "," + d.x
-		         + " " + (d.y + d.parent.y) / 2 + "," + d.parent.x
-		         + " " + d.parent.y + "," + d.parent.x;
-		       });
+		    .attr("d", connector);
 
 		var node = g.selectAll(".node")
-		    		.data(nodes.descendants())
+		    		.data(nodes)
 		  			.enter().append("g")
 		    		.attr("class", function(d) { 
 		      			return "node" + (d.children ? " node--internal" : " node--leaf"); })
 		    		.attr("transform", function(d) { 
-		      			return "translate(" + d.y + "," + d.x + ")"; }
+		      			return "translate(" + radial_point(d.x, d.y) + ")"; }
 		      			);
 
 		node.append("circle")
@@ -88,6 +90,17 @@ function DeviceTree(selector, data, active_device) {
 		    .attr("x", function(d) { return d.children ? -16 : 16; })
 		    .style("text-anchor", function(d) { return d.children ? "end" : "start"; })
 		    .text(function(d) { return d.data.id; });
+
+		function connector(d) {
+        	return "M" + radial_point(d.x, d.y)
+                                     + "C" + radial_point(d.x, (d.y + d.parent.y) / 2)
+                                     + " " + radial_point(d.parent.x, (d.y + d.parent.y) / 2)
+                                     + " " + radial_point(d.parent.x, d.parent.y)
+        }
+
+        function radial_point(x, y) {
+		  return [(y = +y) * Math.cos(x -= Math.PI / 2), y * Math.sin(x)];
+		}
    	}
 
 
