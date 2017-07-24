@@ -14,7 +14,7 @@ function SubGraph(selector, data) {
     var message_passing_time = 100;
     var symbol_size = 300;
     var last_event_time = get_last_event_time();
-  	var max_depth = 2;
+  	var max_depth = 4;
 
   	svg = d3.select("body")
       	.append("svg")
@@ -46,7 +46,6 @@ function SubGraph(selector, data) {
    	}
 
    	this.draw = function() {
-        // TODO: set boundary nodes to circular perimeter
      
         var simulation = d3.forceSimulation()
                     .force("link", d3.forceLink().id(function(d) { return d.id; }).distance(50).strength(0.1))

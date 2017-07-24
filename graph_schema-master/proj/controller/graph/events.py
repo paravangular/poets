@@ -5,9 +5,11 @@ import sys
 import xml.etree.ElementTree as ET
 from lxml import etree
 
-from controller.graph.core import expand_typed_data
+# from controller.graph.core import expand_typed_data
+# from controller.graph.load_xml import *
 
-from controller.graph.load_xml import *
+from graph.core import expand_typed_data
+from graph.load_xml import *
 
 class Event(object):
     def __init__(self, eventId, time, elapsed):
@@ -86,6 +88,7 @@ class RecvEvent(MessageEvent):
 class LogWriter(object):
     def __init__(self):
         self.log = {};
+        self.event_pairs = []
 
     def onInitEvent(self,initEvent):
         if initEvent.eventId not in self.log:
@@ -98,6 +101,7 @@ class LogWriter(object):
     def onRecvEvent(self,recvEvent):
         if recvEvent.eventId not in self.log:
             self.log[recvEvent.eventId] = recvEvent
+            self.event_pairs.append(recvEvent.sendEventId + ":" + recvEvent.eventId)
 
 def extractInitEvent(n,writer):
     eventId=get_attrib(n,"eventId")

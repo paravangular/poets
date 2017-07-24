@@ -28,3 +28,13 @@ AIMS
 
 19/7/17
 	- device view VISUALS
+
+
+- storing preprocessed aggregate data
+- figure out data structure for max speed during user interaction
+- cluster megadevice (all edges collapse into one edge) (metis)
+
+design brief document
+	- user should be able to...
+	- frame rate should be...
+	- lag should be...

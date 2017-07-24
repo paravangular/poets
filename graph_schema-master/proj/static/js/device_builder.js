@@ -33,6 +33,7 @@ function DeviceTree(selector, data, active_device) {
 
 	var g = svg.append("g");
 
+
 	var tree = d3.tree()
     			.size([height, width])
     			.separation(function(a, b) {
@@ -56,10 +57,11 @@ function DeviceTree(selector, data, active_device) {
    			tree_data.children.push(data.nodes[neighbours[i]]);
    		}
 
-   		console.log(tree_data);
+   		// console.log(tree_data);
    		var root = d3.hierarchy(tree_data, function(d) { return d.children; });
-   		root.x0 = height / 2;
-       	root.y0 = 0;
+   		// root.x0 = height / 2;
+     //   	root.y0 = 0;
+
 
    		var nodes = tree(root).descendants();
    		nodes.forEach(function(d) { d.y = d.depth * 180; });
@@ -82,25 +84,29 @@ function DeviceTree(selector, data, active_device) {
 		      			return "translate(" + radial_point(d.x, d.y) + ")"; }
 		      			);
 
-		node.append("circle")
-			.attr("r", 10);
+		node.append("path")
+			.attr("d", d3.symbol().size(function(d) { 
+		      			return (d.children ? 1200 : 300); }).type(d3.symbolCircle))
+			// .append("circle")
+			// .attr("r", )
 
-		node.append("text")
-		    .attr("dy", 3)
-		    .attr("x", function(d) { return d.children ? -16 : 16; })
-		    .style("text-anchor", function(d) { return d.children ? "end" : "start"; })
-		    .text(function(d) { return d.data.id; });
+		// node.append("text")
+		//     .attr("dy", 3)
+		//     .attr("x", function(d) { return d.children ? -16 : 16; })
+		//     .style("text-anchor", function(d) { return d.children ? "end" : "start"; })
+		//     .text(function(d) { return d.data.id; });
 
 		function connector(d) {
         	return "M" + radial_point(d.x, d.y)
-                                     + "C" + radial_point(d.x, (d.y + d.parent.y) / 2)
-                                     + " " + radial_point(d.parent.x, (d.y + d.parent.y) / 2)
+                                     // + "C" + radial_point(d.x, (d.y + d.parent.y) / 2)
+                                     // + " " + radial_point(d.parent.x, (d.y + d.parent.y) / 2)
                                      + " " + radial_point(d.parent.x, d.parent.y)
         }
 
         function radial_point(x, y) {
-		  return [(y = +y) * Math.cos(x -= Math.PI / 2), y * Math.sin(x)];
-		}
+		   	var angle = (x) / 2 * Math.PI, radius = y; // TODO: angle
+  			return [radius * Math.cos(angle), radius * Math.sin(angle)];
+  		}
    	}
 
 
