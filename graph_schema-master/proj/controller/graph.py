@@ -1,5 +1,5 @@
 import networkx as nx
-import metis
+# import metis
 import xml.sax
 import json
 import sys
@@ -14,6 +14,48 @@ from lxml import etree
 from graph.core import *
 from graph.events import *
 from graph.load_xml import *
+
+class MetisInputBuilder():
+	def __init__(self, graph):
+		'''
+		Metis input format:
+
+		V E fmt ncon
+		s w1 w2 ... wncon v1 e1 v2 e2 ... vk ek
+
+		V E flags num_vertex_weights
+		vertex_weights1 v2 w2 v3 w3 v4 w4...
+		vertex_weights2 v3 w3 v4 w4 v5 w5...
+
+		...
+
+		'''
+
+		self.graph = graph
+		self.rows = [None] * (self.graph.number_of_nodes() + 1)
+		self.flag = "011" #
+		self.num_node_weights = 3
+		self.rows[0] = "{} {} {} {}".format(self.graph.number_of_nodes(), self.graph.number_of_edges() // 2, self.flag, self.num_node_weights)
+		self.set_nodes()
+		self.set_edges()
+
+	def set_nodes(self):
+		i = 1
+		for id, dev in self.graph.device_instances.iteritems():
+			dev["nid"] = i
+			self.rows[i] = "{} {} {} ".format(dev["type"], dev["messages_sent"], dev["messages_received"])
+			i += 1
+	def set_edges(self):
+		for id, edge in self.graph.edges.iteritems():
+			src, dst = id.split(":")
+			nsrc = self.graph.device_instances[src]["nid"]
+			ndst = self.graph.device_instances[dst]["nid"]
+			self.rows[nsrc] += "{} {} ".format(ndst, edge["messages"])
+	def write_metis_input_file(self):
+		input_file = open("../data/metis_input", "w")
+		for row in self.rows:
+			input_file.write(row + "\n")
+
 
 class NetworkXBuilder():
 	def __init__(self, graph_src, event_src):
@@ -32,6 +74,7 @@ class NetworkXBuilder():
 		self.device_instances = {}
 		self.set_device_instances()
 
+		# TODO: combine (u,v) and (v,u) edges
 		self.edges = {}
 		self.set_edge_instances()
 
@@ -47,12 +90,16 @@ class NetworkXBuilder():
 		self.add_edges_to_graph()
 
 		# self.metis_graph = metis.networkx_to_metis(self.graph)
-	def write_metis_input(self):
-		pass	
 
 	def partition(self, n):
 		(edgecuts, parts) = metis.part_graph(self.graph, n)
 		print(parts)
+
+	def number_of_nodes(self):
+		return len(self.device_instances)
+
+	def number_of_edges(self):
+		return len(self.edges)
 
 	def add_nodes_to_graph(self):
 		for id, node in self.device_instances.iteritems():
@@ -61,7 +108,7 @@ class NetworkXBuilder():
 	def add_edges_to_graph(self):
 		for id, edge in self.edges.iteritems():
 			src, dst = id.split(":")
-			self.graph.add_edge(src, dst, weight = edge["messages"])
+			self.graph.add_edge(src, dst, weight = edge["messages"]) # TODO: option to partition by num edges or messages
 
 	def set_device_instances(self):
 		i = 0
@@ -78,17 +125,19 @@ class NetworkXBuilder():
 
 	def set_edge_instances(self):
 		for edge_id, edge in self.raw_graph.edge_instances.iteritems():
-			edge_id = edge.src_device.id + ":" + edge.dst_device.id
+			ids = sorted([edge.src_device.id, edge.dst_device.id])
+			edge_id = ids[0] + ":" + ids[1]
 
 			if edge_id in self.edges:
-				self.edges.edge_id.weight += 1
+				self.edges[edge_id]["weight"] += 1
 			else:
-				self.edges[edge_id] = {"weight": 1, "messages": 0}
+				self.edges[edge_id] = {"weight": 1, "messages": 1} # TODO: because edge weights must be > 0
 
 	def set_edge_attributes(self):
 		for evt_pair in self.event_pairs:
 			send_id, recv_id = evt_pair.split(":")
-			edge_id = self.events[send_id].dev + ":" + self.events[recv_id].dev
+			ids = sorted([self.events[send_id].dev, self.events[recv_id].dev])
+			edge_id = ids[0] + ":" + ids[1]
 			self.edges[edge_id]["messages"] += 1
 
 	def set_type_map(self):
@@ -103,7 +152,8 @@ class NetworkXBuilder():
 
 local_file = 'ising_spin_16_2'
 graph = NetworkXBuilder('../data/' + local_file + '.xml', '../data/' + local_file + '_event.xml')
-graph.partition(3)
+metis = MetisInputBuilder(graph)
+metis.write_metis_input_file()
 
 
 
