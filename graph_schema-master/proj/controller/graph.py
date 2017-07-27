@@ -17,7 +17,7 @@ from graph.load_xml import *
 
 
 
-class MetisInputBuilder():
+class MetisHandler():
 	def __init__(self, graph, input_filename, num_parts):
 		'''
 		Metis input format:
@@ -30,6 +30,9 @@ class MetisInputBuilder():
 		vertex_weights2 v3 w3 v4 w4 v5 w5...
 
 		...
+
+		in this particular configuration, only edge weights are taken into account
+		vertices have no weights
 
 		'''
 
@@ -83,13 +86,13 @@ class MetisInputBuilder():
 
 class GraphBuilder():
 	def __init__(self, graph_src, event_src):
-		self.raw_graph = load_graph(graph_src, graph_src)
+		self.raw = load_graph(graph_src, graph_src)
 		
 		# networkx
 		# partitioned node attributes: id n_type sent_msgs recv_msgs
 		# partitioned edge attributes: to from weight/num_links messages
-		self.graph = nx.DiGraph()
-		self.graph.graph['node_weight_attr'] = ['type', 'messages_sent', 'messages_received']
+		# self.graph = nx.DiGraph()
+		# self.graph.graph['node_weight_attr'] = ['type', 'messages_sent', 'messages_received']
 		# self.graph.graph['edge_weight_attr'] = ['weight', 'messages']
 
 		self.type_map = {}
@@ -109,8 +112,8 @@ class GraphBuilder():
 		self.set_node_attributes()
 		self.set_edge_attributes()
 
-		self.add_nodes_to_graph()
-		self.add_edges_to_graph()
+		# self.add_nodes_to_graph()
+		# self.add_edges_to_graph()
 
 	def partition(self, n):
 		(edgecuts, parts) = metis.part_graph(self.graph, n)
@@ -133,7 +136,7 @@ class GraphBuilder():
 
 	def set_device_instances(self):
 		i = 0
-		for id, dev in self.raw_graph.device_instances.iteritems():
+		for id, dev in self.raw.device_instances.iteritems():
 			self.nodes[id] = {"type": self.type_map[dev.device_type.id], "messages_sent": 0, "messages_received": 0}
 			i += 1
 
@@ -145,7 +148,7 @@ class GraphBuilder():
 				self.nodes[evt.dev]["messages_received"] += 1
 
 	def set_edge_instances(self):
-		for edge_id, edge in self.raw_graph.edge_instances.iteritems():
+		for edge_id, edge in self.raw.edge_instances.iteritems():
 			edge_id = min(edge.src_device.id, edge.dst_device.id) + ":" + max(edge.src_device.id, edge.dst_device.id)
 
 			if edge_id in self.edges:
@@ -160,7 +163,7 @@ class GraphBuilder():
 			self.edges[edge_id]["messages"] += 1
 
 	def set_type_map(self):
-		types = self.raw_graph.graph_type.device_types
+		types = self.raw.graph_type.device_types
 		
 		i = 0
 		for dev_type in types:
@@ -171,7 +174,7 @@ class GraphBuilder():
 
 local_file = 'ising_spin_16_2'
 graph = GraphBuilder('../data/' + local_file + '.xml', '../data/' + local_file + '_event.xml')
-metis = MetisInputBuilder(graph, "../data/metis_input", 5)
+metis = MetisHandler(graph, "../data/metis_input", 5)
 metis.execute_metis()
 
 '''
