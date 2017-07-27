@@ -73,13 +73,14 @@ class MetisHandler():
 	def execute_metis(self):
 		self.write_metis_input_file()
 		os.system("gpmetis " + self.filename + " " +  str(self.num_parts))
-		self.read_metis_partition()
+		self.read_metis_partition() # TODO: partition levels
 
-	def read_metis_partition(self):
+	def read_metis_partition(self, level = 0):
 		i = 1
 		with open(self.filename + ".part." + str(self.num_parts), "r") as f:
 			for line in f:
-				self.graph.nodes[self.nid_map[i]]["partition"] = int(line.strip())
+				self.graph.nodes[self.nid_map[i]]["partition_" + str(level)] = int(line.strip())
+				i += 1
 
 
 
@@ -94,6 +95,7 @@ class GraphBuilder():
 		# self.graph = nx.DiGraph()
 		# self.graph.graph['node_weight_attr'] = ['type', 'messages_sent', 'messages_received']
 		# self.graph.graph['edge_weight_attr'] = ['weight', 'messages']
+		self.levels = 1
 
 		self.type_map = {}
 		self.set_type_map()
@@ -172,10 +174,10 @@ class GraphBuilder():
 
 
 
-local_file = 'ising_spin_16_2'
-graph = GraphBuilder('../data/' + local_file + '.xml', '../data/' + local_file + '_event.xml')
-metis = MetisHandler(graph, "../data/metis_input", 5)
-metis.execute_metis()
+# local_file = 'ising_spin_16_2'
+# graph = GraphBuilder('../data/' + local_file + '.xml', '../data/' + local_file + '_event.xml')
+# metis = MetisHandler(graph, "../data/metis_input", 5)
+# metis.execute_metis()
 
 '''
 
