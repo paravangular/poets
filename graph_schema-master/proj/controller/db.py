@@ -88,13 +88,47 @@ class DBBuilder():
 
 		# self.cursor.executemany(query, entries)
 
-	def aggregate_entries(self, level, epoch = 0):
+	def aggregate_state_entries(self, level, epoch = 0):
+
+		aggregable_types = set(["INT", "int", "INTEGER", "integer", "REAL", "real"])
+		pragma_cursor = self.db.cursor()
+		pragma_query = "PRAGMA table_info('device_states')"
+
+		pragma_cursor.execute(pragma_query)
+
+		query = "SELECT partition_" + str(level) + " AS partition_id, "
+		first = True
+		for row in pragma_cursor.fetchall():
+			if not first:
+				query += ", "
+			name = row[1]
+
+			if name != "id" or name != "time":
+				if row[2] in aggregable_types:
+					query += "AVG(" + name + ") AS " + name
+					first = False
+
+		query += " FROM (SELECT * FROM device_states WHERE time <= " + epoch + " ORDER BY time) AS states" + 
+			" JOIN (SELECT id, MAX(time) AS time FROM device_states WHERE time <= " + epoch + " GROUP BY id) AS last_event ON states.id = last_event.id AND states.time = last_event.time"  
+			" JOIN device_partitions ON states.id = device_partitions.id " + 
+			" WHERE states.time = MAX(time) " + 
+			" GROUP BY partition_" + str(level) +
+			" ORDER BY partition_" + str(level)
+		
+
+		pragma_cursor.close()
+
+		cursor = self.db.cursor()
+		cursor.execute(query)
+		rows = cursor.fetchall()
+		
+
+		insert_query = "INSERT INTO device_states_aggregate_" + str(level) + "(partition_id, "
+
 		'''
 		group rows by partition_number
 		fetch average per partition where time is the maximum time smaller than epoch
 
-		SELECT id, partition_{} FROM device_partitions
-		JOIN device_states ON device_partitions.id = device_states.id
 		'''
 
 	# def part_aggregates(self, level, epoch = 0):
@@ -124,13 +158,14 @@ class DBBuilder():
 			for prop in dev_type.properties.elements_by_index:
 				fields.append(Field(prop.name, prop.type))
 
+		fields[0] = Field("partition_id", "int", set(["key"]))
 		self.create_table("device_properties", fields)
 		for i in range(self.graph.levels):
 			self.create_table("device_properties_aggregate_" + str(i), fields)
 
 	def device_states(self):
 		fields = []
-		fields.append(Field("id", "string", set(["key"])))
+		fields.append(Field("id", "string")))
 		fields.append(Field("time", "integer", set(["not null"])))
 
 		types = self.graph.raw.graph_type.device_types
@@ -143,6 +178,7 @@ class DBBuilder():
 
 		self.create_table("device_states", fields)
 
+		fields[0] = Field("partition_id", "int")
 		for i in range(self.graph.levels):
 			self.create_table("device_states_aggregate_" + str(i), fields)
 
