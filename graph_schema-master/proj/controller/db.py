@@ -91,6 +91,7 @@ class DBBuilder():
 	def aggregate_state_entries(self, level, epoch = 0):
 
 		aggregable_types = set(["INT", "int", "INTEGER", "integer", "REAL", "real"])
+		aggregable_columns = []
 		pragma_cursor = self.db.cursor()
 		pragma_query = "PRAGMA table_info('device_states')"
 
@@ -105,6 +106,7 @@ class DBBuilder():
 
 			if name != "id" or name != "time":
 				if row[2] in aggregable_types:
+					aggregable_columns.append(name)
 					query += "AVG(" + name + ") AS " + name
 					first = False
 
@@ -121,9 +123,19 @@ class DBBuilder():
 		cursor = self.db.cursor()
 		cursor.execute(query)
 		rows = cursor.fetchall()
+		values = []
+		for row in rows:
+			values.append(tuple([col in row]))
 		
 
-		insert_query = "INSERT INTO device_states_aggregate_" + str(level) + "(partition_id, "
+		insert_query = "INSERT INTO device_states_aggregate_" + str(level) +
+						"(partition_id, " + ", ".join(aggregable_columns) + ") VALUES(?, " + ", ".join(["?" for x in range(len(aggregable_columns))])
+
+		insert_cursor = self.db.cursor()
+		insert_cursor.executemany(insert_query, values)
+		insert_cursor.close()
+		self.db.commit()
+		
 
 		'''
 		group rows by partition_number
