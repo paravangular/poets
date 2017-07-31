@@ -18,7 +18,7 @@ from graph.load_xml import *
 
 
 class MetisHandler():
-	def __init__(self, graph, input_filename, num_parts):
+	def __init__(self, graph, basedir, nodes_per_part):
 		'''
 		Metis input format:
 
@@ -36,16 +36,29 @@ class MetisHandler():
 
 		'''
 
-		self.filename = input_filename
-		self.num_parts = num_parts
+		self.nodes_per_part = nodes_per_part
 		self.graph = graph
+		self.filename_base = basedir + self.graph.raw.graph_type.id + "_metis_input_"
 		self.rows = [None] * (self.graph.number_of_nodes() + 1)
 		self.flag = "001"
 		self.num_node_weights = 0
 		self.rows[0] = "{} {} {} {}".format(self.graph.number_of_nodes(), self.graph.number_of_edges(), self.flag, self.num_node_weights)
 
+		self.set_nparts()
 		self.set_nodes()
 		self.set_edges()
+
+	def set_nparts(self):
+		nnodes = self.graph.number_of_nodes()
+		self.nlevels = 1
+
+		while nnodes > self.nodes_per_part:
+			nnodes = nnodes // self.nodes_per_part
+			self.nlevels += 1
+
+		self.nparts = nnodes
+
+
 
 	def set_nodes(self):
 		self.nid_map = {}
@@ -65,24 +78,30 @@ class MetisHandler():
 			self.rows[nsrc] += "{} {} ".format(ndst, edge["messages"])
 			self.rows[ndst] += "{} {} ".format(nsrc, edge["messages"])
 			
-	def write_metis_input_file(self):
-		input_file = open(self.filename, "w")
+	def write_metis_input_file(self, level = 0):
+		input_file = open(self.filename(level), "w")
 		for row in self.rows:
 			input_file.write(row + "\n")
 
 	def execute_metis(self):
-		self.write_metis_input_file()
-		os.system("gpmetis " + self.filename + " " +  str(self.num_parts))
-		self.read_metis_partition() # TODO: partition levels
+
+		for i in range(self.nlevels):
+			self.write_metis_input_file(i)
+			os.system("gpmetis " + self.filename(i) + " " +  str(self.nparts))
+			self.read_metis_partition(i) # TODO: partition levels
 
 	def read_metis_partition(self, level = 0):
 		i = 1
-		with open(self.filename + ".part." + str(self.num_parts), "r") as f:
+		with open(self.filename(level) + ".part." + str(self.nparts), "r") as f:
 			for line in f:
-				self.graph.nodes[self.nid_map[i]]["partition_" + str(level)] = int(line.strip())
+				if level == 0:
+					self.graph.nodes[self.nid_map[i]]["partition_" + str(level)] = line.strip()
+				else:
+					self.graph.nodes[self.nid_map[i]]["partition_" + str(level)] = self.graph.nodes[self.nid_map[i]]["partition_" + str(level - 1)] + "_" + line.strip()
 				i += 1
 
-
+	def filename(self, level):
+		return self.filename_base + str(level)
 
 
 class GraphBuilder():

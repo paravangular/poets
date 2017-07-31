@@ -40,7 +40,7 @@ device_states: device state at every change
 class DBBuilder():
 	def __init__(self, graph_src, event_src):
 		self.graph = GraphBuilder(graph_src, event_src)
-		metis = MetisHandler(self.graph, "../data/metis_input", 5) # TODO: num partitions as param?
+		metis = MetisHandler(self.graph, "../data/", 50)
 		metis.execute_metis()
 
 		self.db = sqlite3.connect(self.graph.raw.graph_type.id + '.db')
@@ -110,12 +110,11 @@ class DBBuilder():
 					query += "AVG(" + name + ") AS " + name
 					first = False
 
-		query += " FROM (SELECT * FROM device_states WHERE time <= " + epoch + " ORDER BY time) AS states" + 
+		query += (" FROM (SELECT * FROM device_states WHERE time <= " + epoch + ") AS states" + 
 			" JOIN (SELECT id, MAX(time) AS time FROM device_states WHERE time <= " + epoch + " GROUP BY id) AS last_event ON states.id = last_event.id AND states.time = last_event.time"  
 			" JOIN device_partitions ON states.id = device_partitions.id " + 
-			" WHERE states.time = MAX(time) " + 
 			" GROUP BY partition_" + str(level) +
-			" ORDER BY partition_" + str(level)
+			" ORDER BY partition_" + str(level))
 		
 
 		pragma_cursor.close()
@@ -128,14 +127,14 @@ class DBBuilder():
 			values.append(tuple([col in row]))
 		
 
-		insert_query = "INSERT INTO device_states_aggregate_" + str(level) +
-						"(partition_id, " + ", ".join(aggregable_columns) + ") VALUES(?, " + ", ".join(["?" for x in range(len(aggregable_columns))])
+		insert_query = ("INSERT INTO device_states_aggregate_" + str(level) +
+						"(partition_id, " + ", ".join(aggregable_columns) + ") VALUES(?, " + ", ".join(["?" for x in range(len(aggregable_columns))]))
 
 		insert_cursor = self.db.cursor()
 		insert_cursor.executemany(insert_query, values)
 		insert_cursor.close()
 		self.db.commit()
-		
+
 
 		'''
 		group rows by partition_number
@@ -177,7 +176,7 @@ class DBBuilder():
 
 	def device_states(self):
 		fields = []
-		fields.append(Field("id", "string")))
+		fields.append(Field("id", "string"))
 		fields.append(Field("time", "integer", set(["not null"])))
 
 		types = self.graph.raw.graph_type.device_types
